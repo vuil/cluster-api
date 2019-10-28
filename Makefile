@@ -148,6 +148,10 @@ generate-manifests: $(CONTROLLER_GEN) ## Generate manifests e.g. CRD, RBAC etc.
 		paths=./bootstrap/kubeadm/api/... \
 		crd:trivialVersions=true \
 		output:crd:dir=./config/crd/bases
+	$(CONTROLLER_GEN) \
+    		paths=./cmd/clusterctl/api/... \
+    		crd:trivialVersions=true \
+    		output:crd:dir=./cmd/clusterctl/config/crd/bases
 	## Copy files in CI folders.
 	cp -f ./config/rbac/*.yaml ./config/ci/rbac/
 	cp -f ./config/manager/manager*.yaml ./config/ci/manager/
