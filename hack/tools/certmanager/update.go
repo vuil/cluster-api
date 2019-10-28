@@ -32,7 +32,7 @@ func main() {
 	}
 
 	resp, err := http.Get(fmt.Sprintf("https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml", version))
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
