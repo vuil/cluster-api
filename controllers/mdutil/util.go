@@ -519,7 +519,7 @@ func NewMSNewReplicas(deployment *clusterv1.MachineDeployment, allMSs []*cluster
 			// Cannot scale up.
 			return *(newMS.Spec.Replicas), nil
 		}
-		// Scale up.
+		// ScaleDownControllers up.
 		scaleUpCount := maxTotalMachines - currentMachineCount
 		// Do not exceed the number of desired replicas.
 		scaleUpCount = integer.Int32Min(scaleUpCount, *(deployment.Spec.Replicas)-*(newMS.Spec.Replicas))
@@ -537,7 +537,7 @@ func NewMSNewReplicas(deployment *clusterv1.MachineDeployment, allMSs []*cluster
 			// Cannot scale up.
 			return *(newMS.Spec.Replicas), nil
 		}
-		// Scale up.
+		// ScaleDownControllers up.
 		scaleUpCount := maxTotalMachines - currentMachineCount
 		// Do not exceed the number of desired replicas.
 		scaleUpCount = integer.Int32Min(scaleUpCount, *(deployment.Spec.Replicas)-*(newMS.Spec.Replicas))

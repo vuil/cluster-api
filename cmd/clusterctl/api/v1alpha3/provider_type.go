@@ -19,8 +19,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ProviderSpec defines the desired state of Provider
-type ProviderSpec struct {
+// +kubebuilder:resource:path=providers,scope=Namespaced,categories=cluster-api
+// +kubebuilder:storageversion
+// +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".type"
+// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".version"
+// +kubebuilder:printcolumn:name="Watch Namespace",type="string",JSONPath=".watchedNamespace"
+
+// Provider is the Schema for the providers API
+type Provider struct { //nolint
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// Type indicates the type of the provider.
 	// See ProviderType for a list of supported values
 	// +optional
@@ -32,27 +42,6 @@ type ProviderSpec struct {
 	// if empty the provider controller is watching for objects in all namespaces.
 	// +optional
 	WatchedNamespace string `json:"watchedNamespace,omitempty"`
-}
-
-// ProviderStatus defines the observed state of Provider
-type ProviderStatus struct {
-}
-
-// +kubebuilder:resource:path=providers,scope=Namespaced,categories=cluster-api
-// +kubebuilder:subresource:status
-// +kubebuilder:storageversion
-// +kubebuilder:object:root=true
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type"
-// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
-// +kubebuilder:printcolumn:name="Watch Namespace",type="string",JSONPath=".spec.watchedNamespace"
-
-// Provider is the Schema for the providers API
-type Provider struct { //nolint
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   ProviderSpec   `json:"spec,omitempty"`
-	Status ProviderStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -87,8 +76,8 @@ const (
 
 // GetTypedProviderType attempts to parse the ProviderType field and return
 // the typed ProviderType representation.
-func (a *ProviderSpec) GetTypedProviderType() ProviderType {
-	switch t := ProviderType(a.Type); t {
+func (in *Provider) GetTypedProviderType() ProviderType {
+	switch t := ProviderType(in.Type); t {
 	case
 		CoreProviderType,
 		BootstrapProviderType,

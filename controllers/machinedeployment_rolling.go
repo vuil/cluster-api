@@ -41,7 +41,7 @@ func (r *MachineDeploymentReconciler) rolloutRolling(d *clusterv1.MachineDeploym
 
 	allMSs := append(oldMSs, newMS)
 
-	// Scale up, if we can.
+	// ScaleDownControllers up, if we can.
 	if err := r.reconcileNewMachineSet(allMSs, newMS, d); err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (r *MachineDeploymentReconciler) rolloutRolling(d *clusterv1.MachineDeploym
 		return err
 	}
 
-	// Scale down, if we can.
+	// ScaleDownControllers down, if we can.
 	if err := r.reconcileOldMachineSets(allMSs, oldMSs, newMS, d); err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (r *MachineDeploymentReconciler) reconcileNewMachineSet(allMSs []*clusterv1
 	}
 
 	if *(newMS.Spec.Replicas) > *(deployment.Spec.Replicas) {
-		// Scale down.
+		// ScaleDownControllers down.
 		err := r.scaleMachineSet(newMS, *(deployment.Spec.Replicas), deployment)
 		return err
 	}
@@ -166,7 +166,7 @@ func (r *MachineDeploymentReconciler) reconcileOldMachineSets(allMSs []*clusterv
 
 	logger.V(4).Info("Cleaned up unhealthy replicas from old MachineSets", "count", cleanupCount)
 
-	// Scale down old machine sets, need check maxUnavailable to ensure we can scale down
+	// ScaleDownControllers down old machine sets, need check maxUnavailable to ensure we can scale down
 	allMSs = oldMSs
 	allMSs = append(allMSs, newMS)
 	scaledDownCount, err := r.scaleDownOldMachineSetsForRollingUpdate(allMSs, oldMSs, deployment)
@@ -272,7 +272,7 @@ func (r *MachineDeploymentReconciler) scaleDownOldMachineSetsForRollingUpdate(al
 			continue
 		}
 
-		// Scale down.
+		// ScaleDownControllers down.
 		scaleDownCount := integer.Int32Min(*(targetMS.Spec.Replicas), totalScaleDownCount-totalScaledDown)
 		newReplicasCount := *(targetMS.Spec.Replicas) - scaleDownCount
 		if newReplicasCount > *(targetMS.Spec.Replicas) {

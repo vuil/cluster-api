@@ -168,7 +168,7 @@ var _ = Describe("MachineDeployment Reconciler", func() {
 		}, timeout).Should(BeTrue())
 
 		//
-		// Scale the MachineDeployment and expect Reconcile to be called.
+		// ScaleDownControllers the MachineDeployment and expect Reconcile to be called.
 		//
 		secondMachineSet := machineSets.Items[0]
 		By("Scaling the MachineDeployment to 3 replicas")

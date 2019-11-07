@@ -7,13 +7,13 @@ metadata:
   name: providers.clusterctl.cluster.x-k8s.io
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.type
+  - JSONPath: .type
     name: Type
     type: string
-  - JSONPath: .spec.version
+  - JSONPath: .version
     name: Version
     type: string
-  - JSONPath: .spec.watchedNamespace
+  - JSONPath: .watchedNamespace
     name: Watch Namespace
     type: string
   group: clusterctl.cluster.x-k8s.io
@@ -25,8 +25,7 @@ spec:
     plural: providers
     singular: provider
   scope: Namespaced
-  subresources:
-    status: {}
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: Provider is the Schema for the providers API
@@ -43,25 +42,18 @@ spec:
           type: string
         metadata:
           type: object
-        spec:
-          description: ProviderSpec defines the desired state of Provider
-          properties:
-            type:
-              description: Type indicates the type of the provider. See ProviderType
-                for a list of supported values
-              type: string
-            version:
-              description: Version indicates the component version.
-              type: string
-            watchedNamespace:
-              description: WatchedNamespace indicates the namespace where the provider
-                controller is is watching. if empty the provider controller is watching
-                for objects in all namespaces.
-              type: string
-          type: object
-        status:
-          description: ProviderStatus defines the observed state of Provider
-          type: object
+        type:
+          description: Type indicates the type of the provider. See ProviderType for
+            a list of supported values
+          type: string
+        version:
+          description: Version indicates the component version.
+          type: string
+        watchedNamespace:
+          description: WatchedNamespace indicates the namespace where the provider
+            controller is is watching. if empty the provider controller is watching
+            for objects in all namespaces.
+          type: string
       type: object
   version: v1alpha3
   versions:

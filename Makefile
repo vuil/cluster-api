@@ -44,6 +44,7 @@ CONTROLLER_GEN := $(TOOLS_BIN_DIR)/controller-gen
 GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
 CONVERSION_GEN := $(TOOLS_BIN_DIR)/conversion-gen
 CERTMANAGER_UPDATE := $(TOOLS_BIN_DIR)/certmanager-update
+GOBINDATA_GEN := $(TOOLS_BIN_DIR)/go-bindata
 
 # Define Docker related variables. Releases should modify and double check these vars.
 REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
@@ -104,16 +105,19 @@ $(CONVERSION_GEN): $(TOOLS_DIR)/go.mod
 $(CERTMANAGER_UPDATE): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/certmanager-update ./certmanager
 
+$(GOBINDATA_GEN): $(TOOLS_DIR)/go.mod # Build go-bindata from tools folder.
+	cd $(TOOLS_DIR); go install -tags=tools github.com/jteeuwen/go-bindata/go-bindata
+
 ## --------------------------------------
 ## Linting
 ## --------------------------------------
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## Lint codebase
-	$(GOLANGCI_LINT) run -v
+	$(GOLANGCI_LINT) run -v --skip-files crd_manifests.go
 
 lint-full: $(GOLANGCI_LINT) ## Run slower linters to detect possible issues
-	$(GOLANGCI_LINT) run -v --fast=false
+	$(GOLANGCI_LINT) run -v --fast=false --skip-files crd_manifests.go
 
 ## --------------------------------------
 ## Generate / Manifests
@@ -125,7 +129,7 @@ generate: $(CONTROLLER_GEN) ## Generate code
 	$(MAKE) generate-go
 
 .PHONY: generate-go
-generate-go: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Runs Go related generate targets
+generate-go: $(CONTROLLER_GEN) $(CONVERSION_GEN) $(GOBINDATA_GEN) ## Runs Go related generate targets
 	$(CONTROLLER_GEN) \
 		object:headerFile=./hack/boilerplate/boilerplate.generatego.txt \
 		paths=./api/... \
@@ -134,6 +138,14 @@ generate-go: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Runs Go related generate tar
 		--input-dirs=./api/v1alpha2 \
 		--output-file-base=zz_generated.conversion \
 		--go-header-file=./hack/boilerplate/boilerplate.generatego.txt
+	$(CONTROLLER_GEN) \
+		object:headerFile=./hack/boilerplate/boilerplate.generatego.txt \
+		paths=./cmd/clusterctl/api/...
+	## generate code for embedded clusterctl api manifest
+	mkdir -p ./cmd/clusterctl/config/manifest/
+	kustomize build ./cmd/clusterctl/config/crd > ./cmd/clusterctl/config/manifest/clusterctl-api.yaml
+	go generate ./cmd/clusterctl/config/generate.go
+	rm -r ./cmd/clusterctl/config/manifest/
 
 .PHONY: generate-manifests
 generate-manifests: $(CONTROLLER_GEN) ## Generate manifests e.g. CRD, RBAC etc.
@@ -149,9 +161,9 @@ generate-manifests: $(CONTROLLER_GEN) ## Generate manifests e.g. CRD, RBAC etc.
 		crd:trivialVersions=true \
 		output:crd:dir=./config/crd/bases
 	$(CONTROLLER_GEN) \
-    		paths=./cmd/clusterctl/api/... \
-    		crd:trivialVersions=true \
-    		output:crd:dir=./cmd/clusterctl/config/crd/bases
+    	paths=./cmd/clusterctl/api/... \
+    	crd:trivialVersions=true \
+    	output:crd:dir=./cmd/clusterctl/config/crd/bases
 	## Copy files in CI folders.
 	cp -f ./config/rbac/*.yaml ./config/ci/rbac/
 	cp -f ./config/manager/manager*.yaml ./config/ci/manager/

@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha3 contains API Schema definitions for the clusteradm v1alpha3 API group
+// Package v1alpha3 contains API Schema definitions for the clusterctl v1alpha3 API group
 // +kubebuilder:object:generate=true
 // +groupName=clusterctl.cluster.x-k8s.io
 package v1alpha3
