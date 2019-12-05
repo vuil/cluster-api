@@ -83,6 +83,7 @@ func init() {
 	configClusterClusterCmd.Flags().StringVarP(&cc.infrastructureProvider, "infrastructure", "i", "", "The infrastructure provider that should be used for creating the workload cluster")
 	configClusterClusterCmd.Flags().StringVarP(&cc.bootstrapProvider, "bootstrap", "b", "kubeadm", "The provider that should be used for bootstrapping K8s nodes in the workload cluster")
 
+	configClusterClusterCmd.Flags().StringVarP(&cc.flavor, "flavor", "f", "", "The template variant to be used for crating the workload cluster")
 	configClusterClusterCmd.Flags().StringVarP(&cc.targetNamespace, "target-namespace", "", "", "The namespace where the new Cluster API objects describing the workload cluster should be deployed. If not specified, the namespace from the ")
 	configClusterClusterCmd.Flags().StringVarP(&cc.kubernetesVersion, "kubernetes-version", "", "1.15.0", "The Kubernetes version to use for the workload cluster")
 	configClusterClusterCmd.Flags().IntVarP(&cc.controlplaneCount, "controlplane-machine-count", "", 1, "The number of control plane machines to be added to the workload cluster")

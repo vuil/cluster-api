@@ -30,11 +30,11 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/pkg/internal/test"
 )
 
-//TODO: test newGitHubRepositoryImpl
+//TODO: test newGitHubRepository
 
 //TODO: test GetFiles
 
-func Test_gitHubRepositoryImpl_getLatestRelease(t *testing.T) {
+func Test_gitHubRepository_getLatestRelease(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
@@ -85,9 +85,9 @@ func Test_gitHubRepositoryImpl_getLatestRelease(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := newGitHubRepositoryImpl(tt.field.providerConfig, configVariablesClient)
+			g, err := newGitHubRepository(tt.field.providerConfig, configVariablesClient)
 			if err != nil {
-				t.Fatalf("newGitHubRepositoryImpl() error = %v", err)
+				t.Fatalf("newGitHubRepository() error = %v", err)
 			}
 			g.injectClient = client
 
@@ -103,7 +103,7 @@ func Test_gitHubRepositoryImpl_getLatestRelease(t *testing.T) {
 	}
 }
 
-func Test_gitHubRepositoryImpl_getReleaseByTag(t *testing.T) {
+func Test_gitHubRepository_getReleaseByTag(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
@@ -145,9 +145,9 @@ func Test_gitHubRepositoryImpl_getReleaseByTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := newGitHubRepositoryImpl(providerConfig, configVariablesClient)
+			g, err := newGitHubRepository(providerConfig, configVariablesClient)
 			if err != nil {
-				t.Fatalf("newGitHubRepositoryImpl() error = %v", err)
+				t.Fatalf("newGitHubRepository() error = %v", err)
 			}
 			g.injectClient = client
 
@@ -173,7 +173,7 @@ func Test_gitHubRepositoryImpl_getReleaseByTag(t *testing.T) {
 	}
 }
 
-func Test_gitHubRepositoryImpl_downloadFilesFromRelease(t *testing.T) {
+func Test_gitHubRepository_downloadFilesFromRelease(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
@@ -258,9 +258,9 @@ func Test_gitHubRepositoryImpl_downloadFilesFromRelease(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := newGitHubRepositoryImpl(providerConfig, configVariablesClient)
+			g, err := newGitHubRepository(providerConfig, configVariablesClient)
 			if err != nil {
-				t.Fatalf("newGitHubRepositoryImpl() error = %v", err)
+				t.Fatalf("newGitHubRepository() error = %v", err)
 			}
 			g.injectClient = client
 
@@ -276,7 +276,7 @@ func Test_gitHubRepositoryImpl_downloadFilesFromRelease(t *testing.T) {
 	}
 }
 
-func Test_gitHubRepositoryImpl_getSHA(t *testing.T) {
+func Test_gitHubRepository_getSHA(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
@@ -332,9 +332,9 @@ func Test_gitHubRepositoryImpl_getSHA(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := newGitHubRepositoryImpl(providerConfig, configVariablesClient)
+			g, err := newGitHubRepository(providerConfig, configVariablesClient)
 			if err != nil {
-				t.Fatalf("newGitHubRepositoryImpl() error = %v", err)
+				t.Fatalf("newGitHubRepository() error = %v", err)
 			}
 			g.injectClient = client
 
@@ -350,7 +350,7 @@ func Test_gitHubRepositoryImpl_getSHA(t *testing.T) {
 	}
 }
 
-func Test_gitHubRepositoryImpl_downloadFilesFromTree(t *testing.T) {
+func Test_gitHubRepository_downloadFilesFromTree(t *testing.T) {
 	client, mux, teardown := setup()
 	defer teardown()
 
@@ -492,9 +492,9 @@ func Test_gitHubRepositoryImpl_downloadFilesFromTree(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g, err := newGitHubRepositoryImpl(providerConfig, configVariablesClient)
+			g, err := newGitHubRepository(providerConfig, configVariablesClient)
 			if err != nil {
-				t.Fatalf("newGitHubRepositoryImpl() error = %v", err)
+				t.Fatalf("newGitHubRepository() error = %v", err)
 			}
 			g.injectClient = client
 

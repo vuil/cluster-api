@@ -35,7 +35,6 @@ import (
 
 const (
 	httpsScheme              = "https"
-	httpScheme               = "http"
 	githubDomain             = "github.com"
 	gitHubTokeVariable       = "github-token"
 	gitHubReleaseRepository  = "releases"
@@ -43,7 +42,16 @@ const (
 	gitHubLatestReleaseLabel = "latest"
 )
 
-type gitHubRepositoryImpl struct {
+// gitHubRepository provide support for providers hosted on GitHub.
+//
+// There are two variants of the GitHub repository, one reading from GitHub releases, the other reading from GitHub code tree.
+//
+// Repository using GitHub releases has full support for version, including also "latest" meta version, but no support
+// for “raw” component YAML files because there is no support for nested folders inside GitHub release assets.
+//
+// Repository using GitHub code tree has full support for version (the concept of “version” is mapped on branches and tags),
+// and also support for “raw” component YAML, even though this is not recommended due to performance reasons.
+type gitHubRepository struct {
 	providerConfig           config.Provider
 	configVariablesClient    config.VariablesClient
 	authenticatingHTTPClient *http.Client
@@ -57,25 +65,25 @@ type gitHubRepositoryImpl struct {
 	injectClient             *github.Client
 }
 
-var _ Repository = &gitHubRepositoryImpl{}
+var _ Repository = &gitHubRepository{}
 
-func (g *gitHubRepositoryImpl) DefaultVersion() string {
+func (g *gitHubRepository) DefaultVersion() string {
 	return g.defaultVersion
 }
 
-func (g *gitHubRepositoryImpl) RootPath() string {
+func (g *gitHubRepository) RootPath() string {
 	return g.rootPath
 }
 
-func (g *gitHubRepositoryImpl) ComponentsPath() string {
+func (g *gitHubRepository) ComponentsPath() string {
 	return g.componentsPath
 }
 
-func (g *gitHubRepositoryImpl) KustomizeDir() string {
+func (g *gitHubRepository) KustomizeDir() string {
 	return g.kustomizeDir
 }
 
-func (g *gitHubRepositoryImpl) GetFiles(version, path string) (map[string][]byte, error) {
+func (g *gitHubRepository) GetFiles(version, path string) (map[string][]byte, error) {
 	if g.repositoryType == gitHubReleaseRepository {
 		release, err := g.getReleaseByTag(version)
 		if err != nil {
@@ -112,7 +120,7 @@ func (g *gitHubRepositoryImpl) GetFiles(version, path string) (map[string][]byte
 	return files, nil
 }
 
-func newGitHubRepositoryImpl(providerConfig config.Provider, configVariablesClient config.VariablesClient) (*gitHubRepositoryImpl, error) {
+func newGitHubRepository(providerConfig config.Provider, configVariablesClient config.VariablesClient) (*gitHubRepository, error) {
 	if configVariablesClient == nil {
 		return nil, errors.New("invalid arguments: configVariablesClient can't be nil")
 	}
@@ -151,7 +159,7 @@ func newGitHubRepositoryImpl(providerConfig config.Provider, configVariablesClie
 	// use the url's fragment as a kustomizeDir
 	kustomizeDir := rURL.Fragment
 
-	repo := &gitHubRepositoryImpl{
+	repo := &gitHubRepository{
 		providerConfig:        providerConfig,
 		configVariablesClient: configVariablesClient,
 		owner:                 owner,
@@ -181,14 +189,14 @@ func newGitHubRepositoryImpl(providerConfig config.Provider, configVariablesClie
 	return repo, nil
 }
 
-func (g *gitHubRepositoryImpl) getClient() *github.Client {
+func (g *gitHubRepository) getClient() *github.Client {
 	if g.injectClient != nil {
 		return g.injectClient
 	}
 	return github.NewClient(g.authenticatingHTTPClient)
 }
 
-func (g *gitHubRepositoryImpl) setAuthenticatingClient(token string) {
+func (g *gitHubRepository) setAuthenticatingClient(token string) {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
@@ -198,7 +206,7 @@ func (g *gitHubRepositoryImpl) setAuthenticatingClient(token string) {
 
 // getLatestRelease return the latest release for a github repository, according to
 // semantic version order of the release tag name.
-func (g *gitHubRepositoryImpl) getLatestRelease() (string, error) {
+func (g *gitHubRepository) getLatestRelease() (string, error) {
 	ctx := context.Background()
 	client := g.getClient()
 
@@ -246,7 +254,7 @@ func (g *gitHubRepositoryImpl) getLatestRelease() (string, error) {
 }
 
 // getReleaseByTag return the github repository release with a specific tag name.
-func (g *gitHubRepositoryImpl) getReleaseByTag(tag string) (*github.RepositoryRelease, error) {
+func (g *gitHubRepository) getReleaseByTag(tag string) (*github.RepositoryRelease, error) {
 	ctx := context.Background()
 	client := g.getClient()
 
@@ -263,7 +271,7 @@ func (g *gitHubRepositoryImpl) getReleaseByTag(tag string) (*github.RepositoryRe
 }
 
 // downloadFilesFromRelease download a file from release.
-func (g *gitHubRepositoryImpl) downloadFilesFromRelease(release *github.RepositoryRelease, fileName string) (map[string][]byte, error) {
+func (g *gitHubRepository) downloadFilesFromRelease(release *github.RepositoryRelease, fileName string) (map[string][]byte, error) {
 	ctx := context.Background()
 	client := g.getClient()
 
@@ -315,7 +323,7 @@ func (g *gitHubRepositoryImpl) downloadFilesFromRelease(release *github.Reposito
 // Utilities for discovery of Assets hosted as a github repository tree componentsClient
 
 // getSHA return the SHA1 identifier for a github repository branch or a tag
-func (g *gitHubRepositoryImpl) getSHA(branchOrTag string) (string, error) {
+func (g *gitHubRepository) getSHA(branchOrTag string) (string, error) {
 	ctx := context.Background()
 	client := g.getClient()
 
@@ -349,7 +357,7 @@ func (g *gitHubRepositoryImpl) getSHA(branchOrTag string) (string, error) {
 
 // downloadFilesFromTree download Assets from a file/folder in a github repository tree.
 // If the Path is a folder, also sub-folders are read, recursively.
-func (g *gitHubRepositoryImpl) downloadFilesFromTree(sha, path string) (map[string][]byte, error) {
+func (g *gitHubRepository) downloadFilesFromTree(sha, path string) (map[string][]byte, error) {
 	ctx := context.Background()
 	client := g.getClient()
 
@@ -395,7 +403,7 @@ func (g *gitHubRepositoryImpl) downloadFilesFromTree(sha, path string) (map[stri
 	return assets, nil
 }
 
-func (g *gitHubRepositoryImpl) handleGithubErr(err error, message string, args ...interface{}) error {
+func (g *gitHubRepository) handleGithubErr(err error, message string, args ...interface{}) error {
 	if _, ok := err.(*github.RateLimitError); ok {
 		return errors.New("rate limit for github api has been reached. Please wait one hour or get a personal API tokens a assign it to the GITHUB_TOKEN environment variable")
 	}

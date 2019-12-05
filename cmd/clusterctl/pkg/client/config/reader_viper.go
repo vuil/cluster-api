@@ -25,8 +25,6 @@ import (
 	"k8s.io/klog"
 )
 
-// TODO:unit tests
-
 // viperReader implements Reader using viper for reading from environment variablesClient
 // and from a clusterctl config file.
 type viperReader struct {
@@ -49,10 +47,9 @@ func (v *viperReader) Init(path string) error {
 			return errors.Wrap(err, "failed to get user's home directory")
 		}
 
-		// Configure for searching .clusterctl{.extension} in home directory and in current director
+		// Configure for searching .clusterctl{.extension} in home directory
 		viper.SetConfigName(".clusterctl")
 		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
 	}
 
 	// Configure for reading variablesClient variablesClient that match

@@ -30,6 +30,10 @@ import (
 
 const fileScheme = "file"
 
+// filesystemRepository provide support for providers hosted on local file system.
+//
+// Repository using file system has limited support for version (the repository hosts only one version, that is defined
+// in the version.txt file), and full support for “raw” component YAML
 type filesystemRepository struct {
 	providerConfig config.Provider
 	defaultVersion string

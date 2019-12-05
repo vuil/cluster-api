@@ -91,7 +91,7 @@ func New(path string, options Options) (Client, error) {
 func newClusterctlClient(path string, options Options) (*clusterctlClient, error) {
 	configClient := options.InjectConfig
 	if configClient == nil {
-		c, err := config.New(path, config.Options{})
+		c, err := config.New(path)
 		if err != nil {
 			return nil, err
 		}

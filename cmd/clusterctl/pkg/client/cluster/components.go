@@ -70,20 +70,22 @@ func (p *providerComponents) Create(components repository.Components) error {
 				return errors.Wrapf(err, "failed to get current provider object")
 			}
 
-			klog.V(3).Infof("Updating: %s, %s/%s", r.GroupVersionKind(), r.GetNamespace(), r.GetName())
-
-			// if upgrading an existing component, then use the current resourceVersion for the optimistic lock
-			r.SetResourceVersion(currentR.GetResourceVersion())
-			if err = c.Update(ctx, &r); err != nil { //nolint
-				return errors.Wrapf(err, "failed to update provider object")
+			//if it does not exists, create the component
+			klog.V(3).Infof("Creating: %s, %s/%s", r.GroupVersionKind(), r.GetNamespace(), r.GetName())
+			if err = c.Create(ctx, &r); err != nil { //nolint
+				return errors.Wrapf(err, "failed to create provider object")
 			}
+
 			continue
 		}
 
-		// otherwise create the component
-		klog.V(3).Infof("Creating: %s, %s/%s", r.GroupVersionKind(), r.GetNamespace(), r.GetName())
-		if err = c.Create(ctx, &r); err != nil { //nolint
-			return errors.Wrapf(err, "failed to create provider object")
+		// otherwise update the component
+		klog.V(3).Infof("Updating: %s, %s/%s", r.GroupVersionKind(), r.GetNamespace(), r.GetName())
+
+		// if upgrading an existing component, then use the current resourceVersion for the optimistic lock
+		r.SetResourceVersion(currentR.GetResourceVersion())
+		if err = c.Update(ctx, &r); err != nil { //nolint
+			return errors.Wrapf(err, "failed to update provider object")
 		}
 	}
 

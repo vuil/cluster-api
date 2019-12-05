@@ -34,25 +34,25 @@ type TemplateOptions struct {
 	WorkerCount       int
 }
 
+// Template embeds a YAML file, read from the provider repository, defining the cluster templates (Cluster, Machines etc.).
+// NB. Cluster templates are expected to exist for the infrastructure providers only
 type Template interface {
 	config.Provider
 	Version() string
 	Flavor() string
 	Bootstrap() string
-	Path() string
 	Variables() []string
 	TargetNamespace() string
 	Yaml() []byte
 }
 
+// template implement Template
 type template struct {
 	config.Provider
 	version         string
 	flavor          string
 	bootstrap       string
-	path            string
 	variables       []string
-	rawyaml         []byte
 	targetNamespace string
 	yaml            []byte
 }
@@ -71,10 +71,6 @@ func (t *template) Bootstrap() string {
 	return t.bootstrap
 }
 
-func (t *template) Path() string {
-	return t.path
-}
-
 func (t *template) Variables() []string {
 	return t.variables
 }
@@ -87,55 +83,35 @@ func (t *template) Yaml() []byte {
 	return t.yaml
 }
 
-// templateBuilder provides an helper struct used to split
-// the sequence of steps required to get config templates ready to be installed
-// into smaller, easily manageable pieces.
-type templateBuilder struct {
-	template              *template
-	configVariablesClient config.VariablesClient
-}
-
-func newTemplateBuilder(provider config.Provider, configVariablesClient config.VariablesClient) templateBuilder {
-	return templateBuilder{
-		template: &template{
-			Provider: provider,
-		},
-		configVariablesClient: configVariablesClient,
-	}
-}
-
-func (b *templateBuilder) initFromRepository(version string, path string, rawyaml []byte, flavor string, bootstrap string) {
+// newTemplate returns a new objects embedding a cluster template YAML file
+//
+// It is important to notice that clusterctl applies a set of processing steps to the “raw” cluster template YAML read
+// from the provider repositories:
+// 1. Checks for all the variables in the cluster template YAML file and replace with corresponding config values
+// 2. Process go templates contained in the cluster template YAML file
+// 3. Ensure all the cluster objects are deployed in the target namespace
+func newTemplate(provider config.Provider, version string, path string, flavor string, bootstrap string, rawyaml []byte, configVariablesClient config.VariablesClient, targetNamespace string, options TemplateOptions) (*template, error) {
 
 	// inspect the yaml for variables
 	variables := inspectVariables(rawyaml)
 
-	b.template.version = version
-	b.template.flavor = flavor
-	b.template.bootstrap = bootstrap
-	b.template.variables = variables
-	b.template.path = path
-	b.template.rawyaml = rawyaml
-}
-
-func (b *templateBuilder) BuildFor(targetNamespace string, options TemplateOptions) error {
-
 	// Replace variables
-	yaml, err := replaceVariables(b.template.rawyaml, b.template.variables, b.configVariablesClient)
+	yaml, err := replaceVariables(rawyaml, variables, configVariablesClient)
 	if err != nil {
-		return errors.Wrap(err, "failed to perform variable substitution")
+		return nil, errors.Wrap(err, "failed to perform variable substitution")
 	}
 
 	// executes go templates
 	yaml, err = execGoTemplates(yaml, options)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// set target targetNamespace for all objects using kustomize
 	yamlFile := "template.yaml"
 
 	// gets a kustomization file for setting targetNamespace
-	kustomization := getKustomizationFile(targetNamespace, yamlFile, nil)
+	kustomization := getKustomizationFile(targetNamespace, yamlFile)
 
 	// run kustomize build to get the final yaml
 	finalYaml, err := kustomizeBuild(map[string][]byte{
@@ -143,15 +119,18 @@ func (b *templateBuilder) BuildFor(targetNamespace string, options TemplateOptio
 		"kustomization.yaml": []byte(kustomization),
 	}, "")
 	if err != nil {
-		return errors.Wrap(err, "failed to kustomize template namespace")
+		return nil, errors.Wrap(err, "failed to kustomize template namespace")
 	}
 
-	yaml = finalYaml
-
-	b.template.targetNamespace = targetNamespace
-	b.template.yaml = yaml
-
-	return nil
+	return &template{
+		Provider:        provider,
+		version:         version,
+		flavor:          flavor,
+		bootstrap:       bootstrap,
+		variables:       variables,
+		targetNamespace: targetNamespace,
+		yaml:            finalYaml,
+	}, nil
 }
 
 func execGoTemplates(yaml []byte, options TemplateOptions) ([]byte, error) {
@@ -183,19 +162,12 @@ func joinControlPlaneEnum(count int) []int {
 	return Items
 }
 
-func getKustomizationFile(targetNamespace, fileName string, labels map[string]string) string {
+func getKustomizationFile(targetNamespace, fileName string) string {
 	var sb strings.Builder
 	sb.WriteString("apiVersion: kustomize.config.k8s.io/v1beta1\n")
 	sb.WriteString("kind: Kustomization\n")
 
 	sb.WriteString(fmt.Sprintf("namespace: \"%s\"\n", targetNamespace))
-
-	if len(labels) > 0 {
-		sb.WriteString("commonLabels:\n")
-		for k, v := range labels {
-			sb.WriteString(fmt.Sprintf("  %s: \"%s\"\n", k, v))
-		}
-	}
 
 	sb.WriteString("resources:\n")
 	sb.WriteString(fmt.Sprintf("- \"%s\"\n", fileName))

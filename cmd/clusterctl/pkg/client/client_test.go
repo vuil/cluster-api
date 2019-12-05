@@ -203,11 +203,7 @@ func (f fakeConfigClient) Variables() config.VariablesClient {
 func newFakeConfig() *fakeConfigClient {
 	fakeReader := test.NewFakeReader()
 
-	options := config.Options{
-		InjectReader: fakeReader,
-	}
-
-	client, _ := config.New("fake-config", options)
+	client, _ := config.New("fake-config", config.InjectReader(fakeReader))
 
 	return &fakeConfigClient{
 		fakeReader:     fakeReader,

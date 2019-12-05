@@ -45,13 +45,33 @@ func (c *configClient) Variables() VariablesClient {
 	return newVariablesClient(c.reader)
 }
 
-// New returns a Client.
-func New(path string, options Options) (Client, error) {
-	return newConfigClient(path, options)
+// NewOptions carries the options supported by New
+type NewOptions struct {
+	injectReader Reader
 }
 
-func newConfigClient(path string, options Options) (*configClient, error) {
-	reader := options.InjectReader
+// Option is a configuration option supplied to New
+type Option func(*NewOptions)
+
+// ControlPlanes sets the number of control plane nodes for create
+func InjectReader(reader Reader) Option {
+	return func(c *NewOptions) {
+		c.injectReader = reader
+	}
+}
+
+// New returns a Client.
+func New(path string, options ...Option) (Client, error) {
+	return newConfigClient(path, options...)
+}
+
+func newConfigClient(path string, options ...Option) (*configClient, error) {
+	cfg := &NewOptions{}
+	for _, o := range options {
+		o(cfg)
+	}
+
+	reader := cfg.injectReader
 	if reader == nil {
 		reader = newViperReader()
 	}
@@ -65,11 +85,6 @@ func newConfigClient(path string, options Options) (*configClient, error) {
 	}, nil
 }
 
-// Options allow to set options for a Client
-type Options struct {
-	InjectReader Reader
-}
-
 // Reader has methods to read configurations.
 type Reader interface {
 	Init(string) error
@@ -77,4 +92,5 @@ type Reader interface {
 	UnmarshalKey(string, interface{}) error
 }
 
+// Ensures the FakeReader implements reader
 var _ Reader = &test.FakeReader{}

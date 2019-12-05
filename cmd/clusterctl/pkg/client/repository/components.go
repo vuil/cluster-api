@@ -36,6 +36,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// Components embeds a YAML file, that defines the provider components
+// to be installed in a management cluster (CRD, Controller, RBAC etc.)
 type Components interface {
 	config.Provider
 	Version() string
@@ -47,6 +49,7 @@ type Components interface {
 	Yaml() ([]byte, error)
 }
 
+// components implement Components
 type components struct {
 	config.Provider
 	version           string
@@ -108,6 +111,16 @@ func (c *components) Yaml() ([]byte, error) {
 	return util.JoinYaml(ret...), nil
 }
 
+// newComponents returns a new objects embedding a component YAML file
+//
+// It is important to notice that clusterctl applies a set of processing steps to the “raw” component YAML read
+// from the provider repositories:
+// 1. In case the provider exposed a component YAML that is not “pre-compiled” (e.g. the /config dir), it uses
+// kustomize to create a single component YAML file
+// 2. Checks for all the variables in the component YAML file and replace with corresponding config values
+// 3. Ensure all the provider components are deployed in the target namespace (apply only to namespaced objects)
+// 4. Set the watching namespace for the provider controller
+// 5. Adds labels to all the components in order to allow easy identification of the provider objects
 func newComponents(provider config.Provider, version string, files map[string][]byte, kustomizeDir string, configVariablesClient config.VariablesClient, targetNamespace, watchingNamespace string) (*components, error) {
 
 	// use kustomize build to generate 1 single yaml file for the component manifest, if required
@@ -232,7 +245,8 @@ func kustomizeBuild(files map[string][]byte, kustomizeDir string) ([]byte, error
 
 	// Instead, in case the resources are in nested folder like e.g. when deploying from a /config source folder, we are forced to
 	// use kustomize because the version of kustomize embedded in kubectl is quite older.
-	// This should not be a problem, because in this case the user most probably already has kustomize installed.
+	// This should not be a problem, because this case should happens only for developers, and the such users most probably
+	// already have kustomize installed.
 
 	lines, err := util.NewCmd("kustomize", "build", kustomizeDir).RunAndCapture()
 	if err != nil {

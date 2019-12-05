@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/pkg/client/config"
 )
 
-// ComponentsClient has methods to work with yaml file for generating providing componentsClient.
+// ComponentsClient has methods to work with yaml file for generating provider components.
 // Assets are yaml files to be used for deploying a provider into a management cluster.
 type ComponentsClient interface {
 	Get(version, targetNamespace, watchingNamespace string) (Components, error)
@@ -60,22 +60,6 @@ func (f *componentsClient) Get(version, targetNamespace, watchingNamespace strin
 	if len(files) == 0 {
 		return nil, errors.Errorf("the repository for provider %q does not contains %q file or folder", f.provider.Name(), path)
 	}
-
-	/*
-		b := newComponentsBuilder(f.provider, f.configVariablesClient)
-
-		err = b.initFromRepository(version, files, f.repository.KustomizeDir())
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed parse components for provider %q", f.provider.Name())
-		}
-
-		err = b.buildFor(targetNamespace, watchingNamespace)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed kustomize targetNamespace and labels into %q for provider %q", path, f.provider.Name())
-		}
-
-		return b.components, nil
-	*/
 
 	return newComponents(f.provider, version, files, f.repository.KustomizeDir(), f.configVariablesClient, targetNamespace, watchingNamespace)
 }

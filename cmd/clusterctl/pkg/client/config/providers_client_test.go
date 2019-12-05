@@ -24,145 +24,6 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/pkg/internal/test"
 )
 
-func Test_validateProviderRepository(t *testing.T) {
-	type args struct {
-		r Provider
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Pass",
-			args: args{
-				r: NewProvider("foo", "https://something.com", "CoreProvider"),
-			},
-			wantErr: false,
-		},
-		{
-			name: "Fails if name is empty",
-			args: args{
-				r: NewProvider("", "", ""),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Fails if name is not valid",
-			args: args{
-				r: NewProvider("FOo", "https://something.com", ""),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Fails if url is empty",
-			args: args{
-				r: NewProvider("foo", "", ""),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Fails if url is not valid",
-			args: args{
-				r: NewProvider("foo", "%gh&%ij", "bar"),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Fails if type is empty",
-			args: args{
-				r: NewProvider("foo", "https://something.com", ""),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Fails if type is not valid",
-			args: args{
-				r: NewProvider("foo", "https://something.com", "bar"),
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validateProviderRepository(tt.args.r); (err != nil) != tt.wantErr {
-				t.Errorf("validateProviderRepository() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// check if Defaults returns valid provider repository configurations
-// this is a safeguard for catching immediately changes leading to formally invalid default configurations
-func Test_providers_Defaults(t *testing.T) {
-	reader := test.NewFakeReader()
-
-	p := &providersClient{
-		reader: reader,
-	}
-
-	defaults := p.Defaults()
-
-	for _, d := range defaults {
-		err := validateProviderRepository(d)
-		if err != nil {
-			t.Errorf("Defaults() error = %v, want %v", err, nil)
-		}
-	}
-}
-
-func Test_providers_Get(t *testing.T) {
-	reader := test.NewFakeReader()
-
-	p := &providersClient{
-		reader: reader,
-	}
-
-	defaults := p.Defaults()
-
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Provider
-		wantErr bool
-	}{
-		{
-			name: "pass",
-			args: args{
-				name: p.Defaults()[0].Name(),
-			},
-			want:    &defaults[0],
-			wantErr: false,
-		},
-		{
-			name: "fails if the provider does not exists",
-			args: args{
-				name: "foo",
-			},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &providersClient{
-				reader: reader,
-			}
-			got, err := p.Get(tt.args.name)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Get() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Get() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_providers_List(t *testing.T) {
 	reader := test.NewFakeReader()
 
@@ -261,6 +122,145 @@ func Test_providers_List(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("List() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_validateProviderRepository(t *testing.T) {
+	type args struct {
+		r Provider
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Pass",
+			args: args{
+				r: NewProvider("foo", "https://something.com", "CoreProvider"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "Fails if name is empty",
+			args: args{
+				r: NewProvider("", "", ""),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Fails if name is not valid",
+			args: args{
+				r: NewProvider("FOo", "https://something.com", ""),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Fails if url is empty",
+			args: args{
+				r: NewProvider("foo", "", ""),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Fails if url is not valid",
+			args: args{
+				r: NewProvider("foo", "%gh&%ij", "bar"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Fails if type is empty",
+			args: args{
+				r: NewProvider("foo", "https://something.com", ""),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Fails if type is not valid",
+			args: args{
+				r: NewProvider("foo", "https://something.com", "bar"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateProviderRepository(tt.args.r); (err != nil) != tt.wantErr {
+				t.Errorf("validateProviderRepository() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// check if Defaults returns valid provider repository configurations
+// this is a safeguard for catching changes leading to formally invalid default configurations
+func Test_providers_Defaults(t *testing.T) {
+	reader := test.NewFakeReader()
+
+	p := &providersClient{
+		reader: reader,
+	}
+
+	defaults := p.Defaults()
+
+	for _, d := range defaults {
+		err := validateProviderRepository(d)
+		if err != nil {
+			t.Errorf("Defaults() error = %v, want %v", err, nil)
+		}
+	}
+}
+
+func Test_providers_Get(t *testing.T) {
+	reader := test.NewFakeReader()
+
+	p := &providersClient{
+		reader: reader,
+	}
+
+	defaults := p.Defaults()
+
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Provider
+		wantErr bool
+	}{
+		{
+			name: "pass",
+			args: args{
+				name: p.Defaults()[0].Name(),
+			},
+			want:    &defaults[0],
+			wantErr: false,
+		},
+		{
+			name: "fails if the provider does not exists",
+			args: args{
+				name: "foo",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &providersClient{
+				reader: reader,
+			}
+			got, err := p.Get(tt.args.name)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Get() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Get() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
