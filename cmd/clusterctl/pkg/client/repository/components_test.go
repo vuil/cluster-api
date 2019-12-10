@@ -386,6 +386,83 @@ func Test_fixTargetNamespace_B(t *testing.T) {
 	}
 }
 
+func Test_fixClusterRoleBindings(t *testing.T) {
+	type args struct {
+		objs            []unstructured.Unstructured
+		targetNamespace string
+	}
+	tests := []struct {
+		name     string
+		args     args
+		wantName string
+		wantErr  bool
+	}{
+		{
+			name: "ClusterRoleBinding with namespaced subjects get fixed",
+			args: args{
+				objs: []unstructured.Unstructured{
+					{
+						Object: map[string]interface{}{
+							"kind":       "ClusterRoleBinding",
+							"apiVersion": "rbac.authorization.k8s.io/v1",
+							"metadata": map[string]interface{}{
+								"name": "foo",
+							},
+							"subjects": []map[string]interface{}{
+								{
+									"kind":      "ServiceAccount",
+									"name":      "bar",
+									"namespace": "bar",
+								},
+							},
+						},
+					},
+				},
+				targetNamespace: "target",
+			},
+			wantName: "target-foo",
+			wantErr:  false,
+		},
+		{
+			name: "ClusterRoleBinding without namespaced subjects does not change",
+			args: args{
+				objs: []unstructured.Unstructured{
+					{
+						Object: map[string]interface{}{
+							"kind":       "ClusterRoleBinding",
+							"apiVersion": "rbac.authorization.k8s.io/v1",
+							"metadata": map[string]interface{}{
+								"name": "foo",
+							},
+							"subjects": []map[string]interface{}{
+								{
+									"kind": "User",
+									"name": "bar",
+								},
+							},
+						},
+					},
+				},
+				targetNamespace: "target",
+			},
+			wantName: "09foo",
+			wantErr:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := fixClusterRoleBindings(tt.args.objs, tt.args.targetNamespace)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("fixClusterRoleBindings() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got[0].GetName(), tt.wantName) {
+				t.Errorf("fixClusterRoleBindings()[0].Name got = %v, want %v", got[0].GetName(), tt.wantName)
+			}
+		})
+	}
+}
+
 func fakeDeployment(watchNamespace string) unstructured.Unstructured {
 	var args []string //nolint
 	if watchNamespace != "" {

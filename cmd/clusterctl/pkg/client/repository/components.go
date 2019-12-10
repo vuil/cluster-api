@@ -27,6 +27,7 @@ import (
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -101,7 +102,7 @@ func (c *components) Objs() []unstructured.Unstructured {
 func (c *components) Yaml() ([]byte, error) {
 	var ret [][]byte //nolint
 	for _, o := range c.objs {
-		content, err := yaml.Marshal(o)
+		content, err := yaml.Marshal(o.UnstructuredContent())
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to marshal yaml for %s/%s", o.GetNamespace(), o.GetName())
 		}
@@ -119,8 +120,9 @@ func (c *components) Yaml() ([]byte, error) {
 // kustomize to create a single component YAML file
 // 2. Checks for all the variables in the component YAML file and replace with corresponding config values
 // 3. Ensure all the provider components are deployed in the target namespace (apply only to namespaced objects)
-// 4. Set the watching namespace for the provider controller
-// 5. Adds labels to all the components in order to allow easy identification of the provider objects
+// 4. Ensure all the ClusterRoleBinding which are referencing namespaced objects have the name prefixed with the namespace name
+// 5. Set the watching namespace for the provider controller
+// 6. Adds labels to all the components in order to allow easy identification of the provider objects
 func newComponents(provider config.Provider, version string, files map[string][]byte, kustomizeDir string, configVariablesClient config.VariablesClient, targetNamespace, watchingNamespace string) (*components, error) {
 
 	// use kustomize build to generate 1 single yaml file for the component manifest, if required
@@ -159,6 +161,12 @@ func newComponents(provider config.Provider, version string, files map[string][]
 
 	if targetNamespace == "" {
 		return nil, errors.New("target namespace can't be defaulted. Please specify a target namespace")
+	}
+
+	// ensure all the ClusterRoleBinding which are referencing namespaced objects have the name prefixed with the namespace name
+	objs, err = fixClusterRoleBindings(objs, targetNamespace)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fix ClusterRoleBinding names")
 	}
 
 	// inspect the list of objects for the default watching namespace
@@ -344,6 +352,31 @@ func fixTargetNamespace(objs []unstructured.Unstructured, targetNamespace string
 	}
 
 	return objs
+}
+
+const clusterRoleBindingKind = "ClusterRoleBinding"
+
+func fixClusterRoleBindings(objs []unstructured.Unstructured, targetNamespace string) ([]unstructured.Unstructured, error) {
+	for _, o := range objs {
+		// if the object has Kind ClusterRoleBinding
+		if o.GetKind() == clusterRoleBindingKind {
+			// Convert Unstructured into a typed object
+			b := &rbacv1.ClusterRoleBinding{}
+			if err := scheme.Scheme.Convert(&o, b, nil); err != nil { //nolint
+				return nil, err
+			}
+
+			// check if one of the subjects is namespaced. if yes, Fix the ClusterRoleBinding so it is namespaced as well
+			for _, subject := range b.Subjects {
+				if subject.Namespace != "" {
+					o.SetName(fmt.Sprintf("%s-%s", targetNamespace, o.GetName()))
+					break
+				}
+			}
+		}
+	}
+
+	return objs, nil
 }
 
 //TODO: move in utils
