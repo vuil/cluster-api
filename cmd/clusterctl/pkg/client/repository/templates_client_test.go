@@ -176,10 +176,6 @@ func Test_templates_Get(t *testing.T) {
 				t.Errorf("Get().Bootstrap() got = %v, want = %v ", got.Bootstrap(), tt.want.bootstrap)
 			}
 
-			if got.Path() != tt.want.path {
-				t.Errorf("Get().Path() got = %v, want = %v ", got.Path(), tt.want.path)
-			}
-
 			if !reflect.DeepEqual(got.Variables(), tt.want.variables) {
 				t.Errorf("Get().Variables() got = %v, want = %v ", got.Variables(), tt.want.variables)
 			}

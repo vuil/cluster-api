@@ -284,9 +284,6 @@ func Test_clusterctlClient_GetClusterConfig(t *testing.T) {
 			if got.Bootstrap() != tt.want.bootstrap {
 				t.Errorf("GetClusterTemplate().Bootstrap() got = %v, want %v", got.Bootstrap(), tt.want.bootstrap)
 			}
-			if got.Path() != tt.want.path {
-				t.Errorf("GetClusterTemplate().Path() got = %v, want %v", got.Path(), tt.want.path)
-			}
 			if !reflect.DeepEqual(got.Variables(), tt.want.variables) {
 				t.Errorf("GetClusterTemplate().Variables() got = %v, want %v", got.Variables(), tt.want.variables)
 			}

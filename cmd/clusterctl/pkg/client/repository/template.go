@@ -90,7 +90,7 @@ func (t *template) Yaml() []byte {
 // 1. Checks for all the variables in the cluster template YAML file and replace with corresponding config values
 // 2. Process go templates contained in the cluster template YAML file
 // 3. Ensure all the cluster objects are deployed in the target namespace
-func newTemplate(provider config.Provider, version string, path string, flavor string, bootstrap string, rawyaml []byte, configVariablesClient config.VariablesClient, targetNamespace string, options TemplateOptions) (*template, error) {
+func newTemplate(provider config.Provider, version, flavor, bootstrap string, rawyaml []byte, configVariablesClient config.VariablesClient, targetNamespace string, options TemplateOptions) (*template, error) {
 
 	// inspect the yaml for variables
 	variables := inspectVariables(rawyaml)

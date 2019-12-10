@@ -82,16 +82,7 @@ func (f *templatesClient) Get(flavor, bootstrap string, options TemplateOptions)
 	if len(files) != 1 {
 		return nil, errors.Errorf("the repository for provider %q does not contains %q file", f.provider.Name(), name)
 	}
-	content := files[name]
+	rawyaml := files[name]
 
-	t := newTemplateBuilder(f.provider, f.configVariablesClient)
-
-	t.initFromRepository(version, name, content, flavor, bootstrap)
-
-	err = t.BuildFor(options.Namespace, options)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed kustomize targetNamespace into template %q for provider %q", name, f.provider.Name())
-	}
-
-	return t.template, nil
+	return newTemplate(f.provider, version, flavor, bootstrap, rawyaml, f.configVariablesClient, options.Namespace, options)
 }
