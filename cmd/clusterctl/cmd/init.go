@@ -39,16 +39,16 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a management cluster for Cluster API",
 	Long: LongDesc(`
-		Initialize a management cluster for Cluster API by installing cluster API core components,
+		Initialize a management cluster for Cluster API by installing Cluster API core components,
 		the kubeadm bootstrap provider, and the selected bootstrap and infrastructure providers.
 
-		The management cluster should be an existing Kubernetes cluster, and the identity used
-		for accessing the cluster must have enough privileges for installing cluster API providers.
+		The management cluster must be an existing Kubernetes cluster, and the identity used
+		for accessing the cluster must have enough privileges for installing Cluster API providers.
 
 		Use 'clusterctl config providers' to get the list of available providers; if necessary, edit
-		the .clusterctl file to add new provider configurations or to customize existing ones.
+		the $HOME/cluster-api/.clusterctl.yaml file to add new provider configurations or to customize existing ones.
 		
-		Some providers require environment variable to be set before running clusterctl init; please
+		Some providers require environment variables to be set before running clusterctl init; please
 		refer to the provider documentation or use 'clusterctl config provider [name]' to get the
 		list of required variables.
 
@@ -114,7 +114,7 @@ func runInit() error {
 	if first {
 		fmt.Printf("\nYour cluster API management cluster has been initialized successfully!\n")
 		fmt.Printf("\nYou can now create your first workload cluster by running the following:\n")
-		fmt.Printf("\n  clusterctl create cluster [name]\n\n")
+		fmt.Printf("\n  clusterctl config cluster [name] --kubernetes-version [version] | kubectl apply -f -\n\n")
 	}
 
 	return nil

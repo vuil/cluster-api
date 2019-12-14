@@ -24,6 +24,7 @@ import (
 
 type deleteOptions struct {
 	kubeconfig           string
+	targetNamespace      string
 	forceDeleteNamespace bool
 	forceDeleteCRD       bool
 	deleteAll            bool
@@ -33,32 +34,43 @@ var dd = &deleteOptions{}
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete [providers]",
-	Short: "Delete one or more provider from the management cluster",
+	Short: "Deletes one or more providers from the management cluster",
 	Long: LongDesc(`
 		Deletes one or more providers from the management cluster.`),
 
 	Example: Examples(`
-		# Deletes the AWS provider and the kubeadm provider
-		# Please note that this imply the cancellation of everything related to the provider except the 
-		# hosting namespace and CRDs
+		# Deletes the AWS provider
+		# Please note that this implies the deletion of all provider components except the hosting namespace
+		# and the CRDs.
 		clusterctl delete aws
  
 		# Deletes the instance of the AWS provider hosted in the "foo" namespace
-		# Please note that, in case there are more than one instances of the AWS provider installed in the cluster,
-		# the provider components shared across providers (e.g. ClusterRoles), are not deleted in order to preserve
+		# Please note, if there are multiple instances of the AWS provider installed in the cluster,
+		# global/shared resources (e.g. ClusterRoles), are not deleted in order to preserve
 		# the functioning of the remaining instances.
-		clusterctl delete foo/aws 
- 
+		clusterctl delete aws --namespace=foo
+
+		# Deletes all the providers
+		# Important! As a consequence of this operation, all the corresponding resources managed by
+		# Cluster API Providers are orphaned and there might be ongoing costs incurred as a result of this.
+		clusterctl delete --all
+
 		# Delete the AWS provider and related CRDs. Please note that this forces deletion of 
-		# all the related objects (e.g. AWSClusters, AWSMachines etc.). 
+		# all the related objects (e.g. AWSClusters, AWSMachines etc.).
+		# Important! As a consequence of this operation, all the corresponding resources managed by
+		# the AWS infrastructure provider are orphaned and there might be ongoing costs incurred as a result of this.
 		clusterctl delete aws --delete-crd
 
 		# Delete the AWS provider and its hosting Namespace. Please note that this forces deletion of 
 		# all objects existing in the namespace. 
+		# Important! As a consequence of this operation, all the corresponding resources managed by
+		# Cluster API Providers are orphaned and there might be ongoing costs incurred as a result of this.
 		clusterctl delete aws --delete-namespace
-		
-		# Deletes all the providers
-		clusterctl delete --all`),
+
+		# Reset the management cluster to its original state
+		# Important! As a consequence of this operation all the corresponding resources on target clouds
+		# are "orphaned" and thus there may be ongoing costs incurred as a result of this.
+		clusterctl delete --all --delete-crd  --delete-namespace`),
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if dd.deleteAll && len(args) > 0 {
@@ -75,6 +87,7 @@ var deleteCmd = &cobra.Command{
 
 func init() {
 	deleteCmd.Flags().StringVarP(&dd.kubeconfig, "kubeconfig", "", "", "Path to the kubeconfig file to use for accessing the management cluster. If empty, default rules for kubeconfig discovery will be used")
+	deleteCmd.Flags().StringVarP(&dd.targetNamespace, "namespace", "", "", "The namespace where the provider to be deleted lives. If not specified, the namespace name will be inferred from the current configuration")
 
 	deleteCmd.Flags().BoolVarP(&dd.forceDeleteNamespace, "delete-namespace", "n", false, "Forces the deletion of the namespace where the providers are hosted (and of all the contained objects)")
 	deleteCmd.Flags().BoolVarP(&dd.forceDeleteCRD, "delete-crd", "c", false, "Forces the deletion of the provider's CRDs (and of all the related objects)")
@@ -89,6 +102,7 @@ func runDelete(args []string) error {
 		return err
 	}
 
+	//TODO: change the logic for managing the targetNamespace
 	if err := c.Delete(dd.kubeconfig, dd.forceDeleteNamespace, dd.forceDeleteCRD, args...); err != nil {
 		return err
 	}

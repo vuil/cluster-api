@@ -22,8 +22,8 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Display Cluster API providers configuration and templates for creating workload clusters",
-	Long:  `Display Cluster API providers configuration and templates for creating workload clusters`,
+	Short: "Display Cluster API provider configuration and templates for creating workload clusters",
+	Long:  `Display Cluster API provider configuration and templates for creating workload clusters`,
 }
 
 func init() {

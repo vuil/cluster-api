@@ -38,10 +38,10 @@ var configProvidersCmd = &cobra.Command{
 	Use:     "providers",
 	Aliases: []string{"provider"},
 	Args:    cobra.MaximumNArgs(1),
-	Short:   "Display Cluster API providers configuration",
+	Short:   "Display Cluster API provider configuration",
 	Long: LongDesc(`
-		clusterctl ships with a list of well know providers; if necessary, edit
-		the .clusterctl file to add new provider configurations or to customize existing ones.
+		clusterctl ships with a list of well-known providers; if necessary, edit
+		the $HOME/cluster-api/.clusterctl.yaml file to add new provider configurations or to customize existing ones.
 		
 		Each provider configuration links to a repository, and clusterctl will fetch the provider
 		components yaml from there; required variables and the default namespace where the

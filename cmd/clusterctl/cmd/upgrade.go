@@ -16,4 +16,20 @@ limitations under the License.
 
 package cmd
 
+import "github.com/spf13/cobra"
+
 // TODO: upgrade command
+
+var upgradeCmd = &cobra.Command{
+	Use:   "upgrade",
+	Short: "Upgrades Cluster API providers installed in a management cluster",
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runInit()
+	},
+}
+
+func init() {
+
+	RootCmd.AddCommand(upgradeCmd)
+}

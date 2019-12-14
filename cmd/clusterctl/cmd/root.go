@@ -33,10 +33,8 @@ var RootCmd = &cobra.Command{
 	Use:   "clusterctl",
 	Short: "clusterctl controls a management cluster for Cluster API",
 	Long: LongDesc(`
-		Get started with Cluster API using clusterctl for initializing a management cluster and for creating yaml
-		templates for your workload clusters.
-
-		Then use clusterctl for simplifying the lifecycle of your Cluster API - management clusters.`),
+		Get started with Cluster API using clusterctl for initializing a management cluster by installing
+		Cluster API providers, and then use clusterctl for creating yaml templates for your workload clusters.`),
 }
 
 func Execute() {

@@ -16,4 +16,18 @@ limitations under the License.
 
 package cmd
 
+import "github.com/spf13/cobra"
+
 // TODO: version command
+var versionCmd = &cobra.Command{
+	Use: "version",
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runInit()
+	},
+}
+
+func init() {
+
+	RootCmd.AddCommand(versionCmd)
+}
