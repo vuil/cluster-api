@@ -38,16 +38,22 @@ type templateClient struct {
 	configVariablesClient config.VariablesClient
 }
 
+type TemplateClientInput struct {
+	provider              config.Provider
+	repository            Repository
+	configVariablesClient config.VariablesClient
+}
+
 // Ensure templateClient implements the TemplateClient interface.
 var _ TemplateClient = &templateClient{}
 
 // newTemplateClient returns a templateClient.
-func newTemplateClient(provider config.Provider, version string, repository Repository, configVariablesClient config.VariablesClient) *templateClient {
+func newTemplateClient(input TemplateClientInput, version string) *templateClient {
 	return &templateClient{
-		provider:              provider,
+		provider:              input.provider,
 		version:               version,
-		repository:            repository,
-		configVariablesClient: configVariablesClient,
+		repository:            input.repository,
+		configVariablesClient: input.configVariablesClient,
 	}
 }
 
