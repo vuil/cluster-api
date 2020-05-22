@@ -17,10 +17,9 @@ limitations under the License.
 package repository
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/util"
 	logf "sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 )
 
@@ -30,12 +29,30 @@ type TemplateClient interface {
 	Get(flavor, targetNamespace string, listVariablesOnly bool) (Template, error)
 }
 
+// YamlProcessor defines the methods necessary for creating a specific yaml
+// processor.
+type YamlProcessor interface {
+
+	// ArtifactName returns the name of the template artifacts that need to be
+	// retrieved from the source.
+	ArtifactName(version, flavor string) string
+
+	// GetVariables parses the template artifact blob of bytes and provides a
+	// list of variables that the template requires.
+	GetVariables([]byte) ([]string, error)
+
+	// Process processes the artifact blob of bytes and will return the final
+	// yaml with values retrieved from the config.VariablesClient.
+	Process([]byte, config.VariablesClient) ([]byte, error)
+}
+
 // templateClient implements TemplateClient.
 type templateClient struct {
 	provider              config.Provider
 	version               string
 	repository            Repository
 	configVariablesClient config.VariablesClient
+	processor             YamlProcessor
 }
 
 type TemplateClientInput struct {
@@ -47,14 +64,33 @@ type TemplateClientInput struct {
 // Ensure templateClient implements the TemplateClient interface.
 var _ TemplateClient = &templateClient{}
 
+// TemplateClientOption is a configuration option supplied to
+// newTemplateClient
+type TemplateClientOption func(*templateClient)
+
+// InjectYamlProcessor allows to override the yaml processor implementation to use;
+// by default, the SimpleYamlProcessor is used.
+func InjectYamlProcessor(p YamlProcessor) TemplateClientOption {
+	return func(c *templateClient) {
+		c.processor = p
+	}
+}
+
 // newTemplateClient returns a templateClient.
-func newTemplateClient(input TemplateClientInput, version string) *templateClient {
-	return &templateClient{
+func newTemplateClient(input TemplateClientInput, version string, opts ...TemplateClientOption) *templateClient {
+	tc := &templateClient{
 		provider:              input.provider,
 		version:               version,
 		repository:            input.repository,
 		configVariablesClient: input.configVariablesClient,
+		processor:             newSimpleYamlProcessor(true),
 	}
+
+	for _, o := range opts {
+		o(tc)
+	}
+
+	return tc
 }
 
 // Get return the template for the flavor specified.
@@ -67,19 +103,11 @@ func (c *templateClient) Get(flavor, targetNamespace string, listVariablesOnly b
 		return nil, errors.New("invalid arguments: please provide a targetNamespace")
 	}
 
-	// we are always reading templateClient for a well know version, that usually is
-	// the version of the provider installed in the management cluster.
 	version := c.version
-
-	// building template name according with the naming convention
-	name := "cluster-template"
-	if flavor != "" {
-		name = fmt.Sprintf("%s-%s", name, flavor)
-	}
-	name = fmt.Sprintf("%s.yaml", name)
+	name := c.processor.ArtifactName(version, flavor)
 
 	// read the component YAML, reading the local override file if it exists, otherwise read from the provider repository
-	rawYaml, err := getLocalOverride(&newOverrideInput{
+	rawArtifact, err := getLocalOverride(&newOverrideInput{
 		configVariablesClient: c.configVariablesClient,
 		provider:              c.provider,
 		version:               version,
@@ -89,9 +117,9 @@ func (c *templateClient) Get(flavor, targetNamespace string, listVariablesOnly b
 		return nil, err
 	}
 
-	if rawYaml == nil {
+	if rawArtifact == nil {
 		log.V(5).Info("Fetching", "File", name, "Provider", c.provider.ManifestLabel(), "Version", version)
-		rawYaml, err = c.repository.GetFile(version, name)
+		rawArtifact, err = c.repository.GetFile(version, name)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read %q from provider's repository %q", name, c.provider.ManifestLabel())
 		}
@@ -99,5 +127,37 @@ func (c *templateClient) Get(flavor, targetNamespace string, listVariablesOnly b
 		log.V(1).Info("Using", "Override", name, "Provider", c.provider.ManifestLabel(), "Version", version)
 	}
 
-	return NewTemplate(rawYaml, c.configVariablesClient, targetNamespace, listVariablesOnly)
+	variables, err := c.processor.GetVariables(rawArtifact)
+	if err != nil {
+		return nil, err
+	}
+
+	if listVariablesOnly {
+		return &template{
+			variables:       variables,
+			targetNamespace: targetNamespace,
+		}, nil
+	}
+
+	processedYaml, err := c.processor.Process(rawArtifact, c.configVariablesClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// Transform the yaml in a list of objects, so following transformation can work on typed objects (instead of working on a string/slice of bytes).
+	objs, err := util.ToUnstructured(processedYaml)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse yaml")
+	}
+
+	// Ensures all the template components are deployed in the target namespace (applies only to namespaced objects)
+	// This is required in order to ensure a cluster and all the related objects are in a single namespace, that is a requirement for
+	// the clusterctl move operation (and also for many controller reconciliation loops).
+	objs = fixTargetNamespace(objs, targetNamespace)
+
+	return &template{
+		objs:            objs,
+		variables:       variables,
+		targetNamespace: targetNamespace,
+	}, nil
 }

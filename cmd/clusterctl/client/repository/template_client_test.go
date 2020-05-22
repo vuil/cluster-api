@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
@@ -49,6 +50,7 @@ func Test_templates_Get(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
+		opts    []TemplateClientOption
 		want    want
 		wantErr bool
 	}{
@@ -153,14 +155,42 @@ func Test_templates_Get(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "returns error if processor is unable to get variables",
+			fields: fields{
+				version:  "v1.0",
+				provider: p1,
+				repository: test.NewFakeRepository().
+					WithPaths("root", "").
+					WithDefaultVersion("v1.0").
+					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
+				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
+			},
+			args: args{
+				targetNamespace:   "ns1",
+				listVariablesOnly: true,
+			},
+			opts: []TemplateClientOption{
+				InjectYamlProcessor(NewFakeProcessor().
+					WithGetVariablesErr(errors.New("cannot get vars")).
+					WithArtifactName("cluster-template.yaml"),
+				),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
 			f := newTemplateClient(
-				TemplateClientInput{tt.fields.provider, tt.fields.repository, tt.fields.configVariablesClient},
+				TemplateClientInput{
+					provider:              tt.fields.provider,
+					repository:            tt.fields.repository,
+					configVariablesClient: tt.fields.configVariablesClient,
+				},
 				tt.fields.version,
+				tt.opts...,
 			)
 			got, err := f.Get(tt.args.flavor, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {
@@ -186,4 +216,35 @@ func Test_templates_Get(t *testing.T) {
 			}
 		})
 	}
+}
+
+type FakeProcessor struct {
+	errGetVariables error
+	artifactName    string
+}
+
+func NewFakeProcessor() *FakeProcessor {
+	return &FakeProcessor{}
+}
+
+func (fp *FakeProcessor) WithArtifactName(n string) *FakeProcessor {
+	fp.artifactName = n
+	return fp
+}
+
+func (fp *FakeProcessor) WithGetVariablesErr(e error) *FakeProcessor {
+	fp.errGetVariables = e
+	return fp
+}
+
+func (fp *FakeProcessor) ArtifactName(version, flavor string) string {
+	return fp.artifactName
+}
+
+func (fp *FakeProcessor) GetVariables(raw []byte) ([]string, error) {
+	return nil, fp.errGetVariables
+}
+
+func (fp *FakeProcessor) Process(raw []byte, variablesClient config.VariablesClient) ([]byte, error) {
+	return nil, nil
 }
