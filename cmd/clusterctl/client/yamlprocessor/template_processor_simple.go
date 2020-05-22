@@ -10,27 +10,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package repository
+package yamlprocessor
 
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 )
 
-// simpleYamlProcessor is a yaml processor that does simple variable
+// SimpleProcessor is a yaml processor that does simple variable
 // substitution. The variables are defined in the following format
 // ${variable_name}
-type simpleYamlProcessor struct{}
+type SimpleProcessor struct{}
 
-func newSimpleYamlProcessor() *simpleYamlProcessor {
-	return &simpleYamlProcessor{}
+func NewSimpleProcessor() *SimpleProcessor {
+	return &SimpleProcessor{}
 }
 
-func (tp *simpleYamlProcessor) ArtifactName(version, flavor string) string {
+func (tp *SimpleProcessor) ArtifactName(version, flavor string) string {
 	// building template name according with the naming convention
 	name := "cluster-template"
 	if flavor != "" {
@@ -41,11 +43,11 @@ func (tp *simpleYamlProcessor) ArtifactName(version, flavor string) string {
 	return name
 }
 
-func (tp *simpleYamlProcessor) GetVariables(rawArtifact []byte) ([]string, error) {
+func (tp *SimpleProcessor) GetVariables(rawArtifact []byte) ([]string, error) {
 	return inspectVariables(rawArtifact), nil
 }
 
-func (tp *simpleYamlProcessor) Process(rawArtifact []byte, variablesClient config.VariablesClient) ([]byte, error) {
+func (tp *SimpleProcessor) Process(rawArtifact []byte, variablesClient config.VariablesClient) ([]byte, error) {
 	variables := inspectVariables(rawArtifact)
 
 	tmp := string(rawArtifact)
@@ -65,4 +67,23 @@ func (tp *simpleYamlProcessor) Process(rawArtifact []byte, variablesClient confi
 	}
 
 	return []byte(tmp), err
+}
+
+// variableRegEx defines the regexp used for searching variables inside a YAML
+var variableRegEx = regexp.MustCompile(`\${\s*([A-Z0-9_]+)\s*}`)
+
+func inspectVariables(data []byte) []string {
+	variables := sets.NewString()
+	match := variableRegEx.FindAllStringSubmatch(string(data), -1)
+
+	for _, m := range match {
+		submatch := m[1]
+		if !variables.Has(submatch) {
+			variables.Insert(submatch)
+		}
+	}
+
+	ret := variables.List()
+	sort.Strings(ret)
+	return ret
 }

@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,6 +49,7 @@ type templateClient struct {
 	proxy               Proxy
 	configClient        config.Client
 	gitHubClientFactory func(configVariablesClient config.VariablesClient) (*github.Client, error)
+	processor           yaml.Processor
 }
 
 // ensure templateClient implements TemplateClient.
@@ -59,6 +61,7 @@ func newTemplateClient(proxy Proxy, configClient config.Client) *templateClient 
 		proxy:               proxy,
 		configClient:        configClient,
 		gitHubClientFactory: getGitHubClient,
+		processor:           yaml.NewSimpleProcessor(),
 	}
 }
 
@@ -90,7 +93,7 @@ func (t *templateClient) GetFromConfigMap(configMapNamespace, configMapName, con
 		return nil, errors.Errorf("the ConfigMap %s/%s does not have the %q data key", configMapNamespace, configMapName, configMapDataKey)
 	}
 
-	return repository.NewTemplate([]byte(data), t.configClient.Variables(), targetNamespace, listVariablesOnly)
+	return repository.NewTemplate([]byte(data), t.configClient.Variables(), t.processor, targetNamespace, listVariablesOnly)
 }
 
 func (t *templateClient) GetFromURL(templateURL, targetNamespace string, listVariablesOnly bool) (repository.Template, error) {
@@ -103,7 +106,7 @@ func (t *templateClient) GetFromURL(templateURL, targetNamespace string, listVar
 		return nil, errors.Wrapf(err, "invalid GetFromURL operation")
 	}
 
-	return repository.NewTemplate(content, t.configClient.Variables(), targetNamespace, listVariablesOnly)
+	return repository.NewTemplate(content, t.configClient.Variables(), t.processor, targetNamespace, listVariablesOnly)
 }
 
 func (t *templateClient) getURLContent(templateURL string) ([]byte, error) {

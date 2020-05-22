@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
 )
 
@@ -70,9 +71,19 @@ func (t *template) Yaml() ([]byte, error) {
 }
 
 // NewTemplate returns a new objects embedding a cluster template YAML file.
-func NewTemplate(rawYaml []byte, configVariablesClient config.VariablesClient, targetNamespace string, listVariablesOnly bool) (*template, error) {
-	// Inspect variables and replace with values from the configuration.
-	variables := inspectVariables(rawYaml)
+// TODO: SO MANY ARGS! REFACTOR ME.
+func NewTemplate(
+	rawArtifact []byte,
+	configVariablesClient config.VariablesClient,
+	processor yaml.Processor,
+	targetNamespace string,
+	listVariablesOnly bool,
+) (*template, error) {
+	variables, err := processor.GetVariables(rawArtifact)
+	if err != nil {
+		return nil, err
+	}
+
 	if listVariablesOnly {
 		return &template{
 			variables:       variables,
@@ -80,13 +91,13 @@ func NewTemplate(rawYaml []byte, configVariablesClient config.VariablesClient, t
 		}, nil
 	}
 
-	yaml, err := replaceVariables(rawYaml, variables, configVariablesClient, false)
+	processedYaml, err := processor.Process(rawArtifact, configVariablesClient)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform variable substitution")
+		return nil, err
 	}
 
 	// Transform the yaml in a list of objects, so following transformation can work on typed objects (instead of working on a string/slice of bytes).
-	objs, err := utilyaml.ToUnstructured(yaml)
+	objs, err := utilyaml.ToUnstructured(processedYaml)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse yaml")
 	}

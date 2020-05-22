@@ -33,14 +33,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/test"
 )
 
-var template = "apiVersion: cluster.x-k8s.io/v1alpha3\n" +
-	"kind: Cluster\n" +
-	"---\n" +
-	"apiVersion: cluster.x-k8s.io/v1alpha3\n" +
-	"kind: Machine"
+var template = `apiVersion: cluster.x-k8s.io/v1alpha3
+kind: Cluster
+---
+apiVersion: cluster.x-k8s.io/v1alpha3
+kind: Machine`
 
 func Test_templateClient_GetFromConfigMap(t *testing.T) {
 	g := NewWithT(t)
@@ -133,19 +134,26 @@ func Test_templateClient_GetFromConfigMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			simpleProcessor := yaml.NewSimpleProcessor()
 			tc := &templateClient{
 				proxy:        tt.fields.proxy,
 				configClient: tt.fields.configClient,
+				processor:    simpleProcessor,
 			}
 			got, err := tc.GetFromConfigMap(tt.args.configMapNamespace, tt.args.configMapName, tt.args.configMapDataKey, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {
 				g.Expect(err).To(HaveOccurred())
 				return
 			}
-
 			g.Expect(err).NotTo(HaveOccurred())
 
-			wantTemplate, err := repository.NewTemplate([]byte(tt.want), configClient.Variables(), tt.args.targetNamespace, tt.args.listVariablesOnly)
+			wantTemplate, err := repository.NewTemplate(
+				[]byte(tt.want),
+				configClient.Variables(),
+				simpleProcessor,
+				tt.args.targetNamespace,
+				tt.args.listVariablesOnly,
+			)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got).To(Equal(wantTemplate))
 		})
@@ -345,6 +353,7 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 				gitHubClientFactory: func(configVariablesClient config.VariablesClient) (*github.Client, error) {
 					return client, nil
 				},
+				processor: yaml.NewSimpleProcessor(),
 			}
 			got, err := c.GetFromURL(tt.args.templateURL, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {
@@ -354,7 +363,13 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 
 			g.Expect(err).NotTo(HaveOccurred())
 
-			wantTemplate, err := repository.NewTemplate([]byte(tt.want), configClient.Variables(), tt.args.targetNamespace, tt.args.listVariablesOnly)
+			wantTemplate, err := repository.NewTemplate(
+				[]byte(tt.want),
+				configClient.Variables(),
+				yaml.NewSimpleProcessor(),
+				tt.args.targetNamespace,
+				tt.args.listVariablesOnly,
+			)
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got).To(Equal(wantTemplate))
 		})
