@@ -21,14 +21,13 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 )
 
-type simpleYamlProcessor struct {
-	skipVariables bool
-}
+// simpleYamlProcessor is a yaml processor that does simple variable
+// substitution. The variables are defined in the following format
+// ${variable_name}
+type simpleYamlProcessor struct{}
 
-func newSimpleYamlProcessor(skipVariables bool) *simpleYamlProcessor {
-	return &simpleYamlProcessor{
-		skipVariables: skipVariables,
-	}
+func newSimpleYamlProcessor() *simpleYamlProcessor {
+	return &simpleYamlProcessor{}
 }
 
 func (tp *simpleYamlProcessor) ArtifactName(version, flavor string) string {

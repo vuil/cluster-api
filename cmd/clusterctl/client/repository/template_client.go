@@ -76,14 +76,15 @@ func InjectYamlProcessor(p YamlProcessor) TemplateClientOption {
 	}
 }
 
-// newTemplateClient returns a templateClient.
+// newTemplateClient returns a templateClient. It uses the SimpleYamlProcessor
+// by default
 func newTemplateClient(input TemplateClientInput, version string, opts ...TemplateClientOption) *templateClient {
 	tc := &templateClient{
 		provider:              input.provider,
 		version:               version,
 		repository:            input.repository,
 		configVariablesClient: input.configVariablesClient,
-		processor:             newSimpleYamlProcessor(true),
+		processor:             newSimpleYamlProcessor(),
 	}
 
 	for _, o := range opts {
