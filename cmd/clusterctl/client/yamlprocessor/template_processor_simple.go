@@ -48,8 +48,10 @@ func (tp *SimpleProcessor) GetVariables(rawArtifact []byte) ([]string, error) {
 }
 
 func (tp *SimpleProcessor) Process(rawArtifact []byte, variablesClient config.VariablesClient) ([]byte, error) {
+	// Inspect the yaml read from the repository for variables.
 	variables := inspectVariables(rawArtifact)
 
+	// Replace variables with corresponding values read from the config
 	tmp := string(rawArtifact)
 	var err error
 	var missingVariables []string
@@ -70,7 +72,7 @@ func (tp *SimpleProcessor) Process(rawArtifact []byte, variablesClient config.Va
 }
 
 // variableRegEx defines the regexp used for searching variables inside a YAML
-var variableRegEx = regexp.MustCompile(`\${\s*([A-Z0-9_]+)\s*}`)
+var variableRegEx = regexp.MustCompile(`\${\s*([A-Z0-9_$]+)\s*}`)
 
 func inspectVariables(data []byte) []string {
 	variables := sets.NewString()

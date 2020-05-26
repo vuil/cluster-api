@@ -19,7 +19,6 @@ package repository
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -27,10 +26,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/sets"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/scheme"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/util"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
@@ -194,18 +193,20 @@ type ComponentsOptions struct {
 // 4. Ensure all the ClusterRoleBinding which are referencing namespaced objects have the name prefixed with the namespace name
 // 5. Set the watching namespace for the provider controller
 // 6. Adds labels to all the components in order to allow easy identification of the provider objects
-func NewComponents(provider config.Provider, configClient config.Client, rawyaml []byte, options ComponentsOptions) (*components, error) {
-	// Inspect the yaml read from the repository for variables.
-	variables := inspectVariables(rawyaml)
+func NewComponents(provider config.Provider, configClient config.Client, processor yaml.Processor, rawyaml []byte, options ComponentsOptions) (*components, error) {
 
-	// Replace variables with corresponding values read from the config
-	yaml, err := replaceVariables(rawyaml, variables, configClient.Variables(), options.SkipVariables)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform variable substitution")
+	variables, err := processor.GetVariables(rawyaml)
+
+	processedYaml := rawyaml
+	if !options.SkipVariables {
+		processedYaml, err = processor.Process(rawyaml, configClient.Variables())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to perform variable substitution")
+		}
 	}
 
 	// Transform the yaml in a list of objects, so following transformation can work on typed objects (instead of working on a string/slice of bytes)
-	objs, err := utilyaml.ToUnstructured(yaml)
+	objs, err := utilyaml.ToUnstructured(processedYaml)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse yaml")
 	}
@@ -331,41 +332,6 @@ func splitInstanceAndSharedResources(objs []unstructured.Unstructured) (instance
 		instanceObjs = append(instanceObjs, o)
 	}
 	return
-}
-
-func inspectVariables(data []byte) []string {
-	variables := sets.NewString()
-	match := variableRegEx.FindAllStringSubmatch(string(data), -1)
-
-	for _, m := range match {
-		submatch := m[1]
-		if !variables.Has(submatch) {
-			variables.Insert(submatch)
-		}
-	}
-
-	ret := variables.List()
-	sort.Strings(ret)
-	return ret
-}
-
-func replaceVariables(yaml []byte, variables []string, configVariablesClient config.VariablesClient, skipVariables bool) ([]byte, error) {
-	tmp := string(yaml)
-	var missingVariables []string
-	for _, key := range variables {
-		val, err := configVariablesClient.Get(key)
-		if err != nil {
-			missingVariables = append(missingVariables, key)
-			continue
-		}
-		exp := regexp.MustCompile(`\$\{\s*` + regexp.QuoteMeta(key) + `\s*\}`)
-		tmp = exp.ReplaceAllLiteralString(tmp, val)
-	}
-	if !skipVariables && len(missingVariables) > 0 {
-		return nil, errors.Errorf("value for variables [%s] is not set. Please set the value using os environment variables or the clusterctl config file", strings.Join(missingVariables, ", "))
-	}
-
-	return []byte(tmp), nil
 }
 
 // inspectTargetNamespace identifies the name of the namespace object contained in the components YAML, if any.

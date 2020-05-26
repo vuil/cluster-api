@@ -74,6 +74,7 @@ func Test_componentsClient_Get(t *testing.T) {
 		version           string
 		targetNamespace   string
 		watchingNamespace string
+		skipVariables     bool
 	}
 	type want struct {
 		provider          config.Provider
@@ -90,7 +91,7 @@ func Test_componentsClient_Get(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Pass",
+			name: "successfully gets the components",
 			fields: fields{
 				provider: p1,
 				repository: test.NewFakeRepository().
@@ -102,6 +103,30 @@ func Test_componentsClient_Get(t *testing.T) {
 				version:           "v1.0.0",
 				targetNamespace:   "",
 				watchingNamespace: "",
+			},
+			want: want{
+				provider:          p1,
+				version:           "v1.0.0",      // version detected
+				targetNamespace:   namespaceName, // default targetNamespace detected
+				watchingNamespace: "",
+				variables:         []string{variableName}, // variable detected
+			},
+			wantErr: false,
+		},
+		{
+			name: "successfully gets the components even with SkipVariables defined",
+			fields: fields{
+				provider: p1,
+				repository: test.NewFakeRepository().
+					WithPaths("root", "components.yaml").
+					WithDefaultVersion("v1.0.0").
+					WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml)),
+			},
+			args: args{
+				version:           "v1.0.0",
+				targetNamespace:   "",
+				watchingNamespace: "",
+				skipVariables:     true,
 			},
 			want: want{
 				provider:          p1,
@@ -237,6 +262,7 @@ func Test_componentsClient_Get(t *testing.T) {
 				Version:           tt.args.version,
 				TargetNamespace:   tt.args.targetNamespace,
 				WatchingNamespace: tt.args.watchingNamespace,
+				SkipVariables:     tt.args.skipVariables,
 			}
 			f := newComponentsClient(tt.fields.provider, tt.fields.repository, configClient)
 			got, err := f.Get(options)
@@ -259,8 +285,16 @@ func Test_componentsClient_Get(t *testing.T) {
 				return
 			}
 
-			if len(tt.want.variables) > 0 {
+			if !tt.args.skipVariables && len(tt.want.variables) > 0 {
 				gs.Expect(yaml).To(ContainSubstring(variableValue))
+			}
+
+			// Verify that when SkipVariables is set we have all the variables
+			// in the template without the values processed.
+			if tt.args.skipVariables {
+				for _, v := range tt.want.variables {
+					gs.Expect(yaml).To(ContainSubstring(v))
+				}
 			}
 
 			for _, o := range got.InstanceObjs() {
