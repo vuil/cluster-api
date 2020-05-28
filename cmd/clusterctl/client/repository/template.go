@@ -71,7 +71,7 @@ func (t *template) Yaml() ([]byte, error) {
 }
 
 // NewTemplate returns a new objects embedding a cluster template YAML file.
-// TODO: SO MANY ARGS! REFACTOR ME.
+// TODO: Refactor to reduce the number of args passed in.
 func NewTemplate(
 	rawArtifact []byte,
 	configVariablesClient config.VariablesClient,

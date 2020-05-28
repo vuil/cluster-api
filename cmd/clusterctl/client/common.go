@@ -47,7 +47,7 @@ func (c *clusterctlClient) getComponentsByName(provider string, providerType clu
 	// and watching namespace etc.
 	// No need to pass in a yamlprocessor since SimpleYamlProcessor is used by
 	// default
-	repositoryClientFactory, err := c.repositoryClientFactory(providerConfig, nil)
+	repositoryClientFactory, err := c.repositoryClientFactory(RepositoryClientFactoryInput{provider: providerConfig})
 	if err != nil {
 		return nil, err
 	}

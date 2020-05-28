@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
@@ -310,4 +311,57 @@ func Test_componentsClient_Get(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_componentsClient_YamlProcessor(t *testing.T) {
+	t.Run("Get returns error if yaml processor cannot get Variables", func(t *testing.T) {
+		g := NewWithT(t)
+
+		p := config.NewProvider("p1", "", clusterctlv1.BootstrapProviderType)
+		configClient, err := config.New("", config.InjectReader(test.NewFakeReader().WithVar(variableName, variableValue)))
+		g.Expect(err).NotTo(HaveOccurred())
+		r := test.NewFakeRepository().
+			WithPaths("root", "components.yaml").
+			WithDefaultVersion("v1.0.0").
+			WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
+
+		f := newComponentsClient(p, r, configClient)
+		//override the yaml processor to one that will return an error
+		f.processor = NewFakeProcessor().WithGetVariablesErr(errors.New("cannot get vars"))
+
+		options := ComponentsOptions{
+			Version:           "v1.0.0",
+			TargetNamespace:   "default",
+			WatchingNamespace: "",
+		}
+		components, err := f.Get(options)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(components).To(BeNil())
+	})
+
+	t.Run("Get returns error if yaml processor cannot process the raw yaml", func(t *testing.T) {
+		g := NewWithT(t)
+
+		p := config.NewProvider("p1", "", clusterctlv1.BootstrapProviderType)
+		configClient, err := config.New("", config.InjectReader(test.NewFakeReader().WithVar(variableName, variableValue)))
+		g.Expect(err).NotTo(HaveOccurred())
+		r := test.NewFakeRepository().
+			WithPaths("root", "components.yaml").
+			WithDefaultVersion("v1.0.0").
+			WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
+
+		f := newComponentsClient(p, r, configClient)
+		//override the yaml processor to one that will return an error
+		f.processor = NewFakeProcessor().WithProcessErr(errors.New("cannot process"))
+
+		options := ComponentsOptions{
+			Version:           "v1.0.0",
+			TargetNamespace:   "default",
+			WatchingNamespace: "",
+		}
+
+		components, err := f.Get(options)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(components).To(BeNil())
+	})
 }

@@ -221,6 +221,7 @@ func Test_templates_Get(t *testing.T) {
 
 type FakeProcessor struct {
 	errGetVariables error
+	errProcess      error
 	artifactName    string
 }
 
@@ -238,6 +239,11 @@ func (fp *FakeProcessor) WithGetVariablesErr(e error) *FakeProcessor {
 	return fp
 }
 
+func (fp *FakeProcessor) WithProcessErr(e error) *FakeProcessor {
+	fp.errProcess = e
+	return fp
+}
+
 func (fp *FakeProcessor) ArtifactName(version, flavor string) string {
 	return fp.artifactName
 }
@@ -247,5 +253,5 @@ func (fp *FakeProcessor) GetVariables(raw []byte) ([]string, error) {
 }
 
 func (fp *FakeProcessor) Process(raw []byte, variablesClient config.VariablesClient) ([]byte, error) {
-	return nil, nil
+	return nil, fp.errProcess
 }

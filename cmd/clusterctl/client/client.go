@@ -65,8 +65,20 @@ type clusterctlClient struct {
 	clusterClientFactory    ClusterClientFactory
 }
 
-type RepositoryClientFactory func(config.Provider, Processor) (repository.Client, error)
-type ClusterClientFactory func(Kubeconfig) (cluster.Client, error)
+type RepositoryClientFactoryInput struct {
+	// TODO: this type should be Provider which is an alias of
+	// config.Provider. Should abide by the contract of not exposing internal
+	// types out.
+	provider  config.Provider
+	processor Processor
+}
+type RepositoryClientFactory func(RepositoryClientFactoryInput) (repository.Client, error)
+
+type ClusterClientFactoryInput struct {
+	kubeconfig Kubeconfig
+	processor  Processor
+}
+type ClusterClientFactory func(ClusterClientFactoryInput) (cluster.Client, error)
 
 // Ensure clusterctlClient implements Client.
 var _ Client = &clusterctlClient{}
@@ -133,15 +145,24 @@ func newClusterctlClient(path string, options ...Option) (*clusterctlClient, err
 
 // defaultRepositoryFactory is a RepositoryClientFactory func the uses the default client provided by the repository low level library.
 func defaultRepositoryFactory(configClient config.Client) RepositoryClientFactory {
-	return func(providerConfig config.Provider, p Processor) (repository.Client, error) {
-		return repository.New(providerConfig, configClient, repository.InjectYamlProcessor(yaml.Processor(p)))
+	return func(input RepositoryClientFactoryInput) (repository.Client, error) {
+		return repository.New(
+			input.provider,
+			configClient,
+			repository.InjectYamlProcessor(yaml.Processor(input.processor)),
+		)
 	}
 }
 
 // defaultClusterFactory is a ClusterClientFactory func the uses the default client provided by the cluster low level library.
 func defaultClusterFactory(configClient config.Client) ClusterClientFactory {
-	return func(kubeconfig Kubeconfig) (cluster.Client, error) {
-		// Kubeconfig is a type alias to cluster.Kubeconfig
-		return cluster.New(cluster.Kubeconfig(kubeconfig), configClient), nil
+	return func(input ClusterClientFactoryInput) (cluster.Client, error) {
+		return cluster.New(
+			// Kubeconfig is a type alias to cluster.Kubeconfig
+			cluster.Kubeconfig(input.kubeconfig),
+			configClient,
+			// Processor is a type alias to yaml.Processor
+			cluster.InjectYamlProcessor(yaml.Processor(input.processor)),
+		), nil
 	}
 }

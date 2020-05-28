@@ -55,13 +55,19 @@ type templateClient struct {
 // ensure templateClient implements TemplateClient.
 var _ TemplateClient = &templateClient{}
 
+type TemplateClientInput struct {
+	proxy        Proxy
+	configClient config.Client
+	processor    yaml.Processor
+}
+
 // newTemplateClient returns a templateClient.
-func newTemplateClient(proxy Proxy, configClient config.Client) *templateClient {
+func newTemplateClient(input TemplateClientInput) *templateClient {
 	return &templateClient{
-		proxy:               proxy,
-		configClient:        configClient,
+		proxy:               input.proxy,
+		configClient:        input.configClient,
 		gitHubClientFactory: getGitHubClient,
-		processor:           yaml.NewSimpleProcessor(),
+		processor:           input.processor,
 	}
 }
 

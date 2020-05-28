@@ -134,12 +134,8 @@ func Test_templateClient_GetFromConfigMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			simpleProcessor := yaml.NewSimpleProcessor()
-			tc := &templateClient{
-				proxy:        tt.fields.proxy,
-				configClient: tt.fields.configClient,
-				processor:    simpleProcessor,
-			}
+			processor := yaml.NewSimpleProcessor()
+			tc := newTemplateClient(TemplateClientInput{tt.fields.proxy, tt.fields.configClient, processor})
 			got, err := tc.GetFromConfigMap(tt.args.configMapNamespace, tt.args.configMapName, tt.args.configMapDataKey, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {
 				g.Expect(err).To(HaveOccurred())
@@ -150,7 +146,7 @@ func Test_templateClient_GetFromConfigMap(t *testing.T) {
 			wantTemplate, err := repository.NewTemplate(
 				[]byte(tt.want),
 				configClient.Variables(),
-				simpleProcessor,
+				processor,
 				tt.args.targetNamespace,
 				tt.args.listVariablesOnly,
 			)
@@ -294,7 +290,7 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 	configClient, err := config.New("", config.InjectReader(test.NewFakeReader()))
 	g.Expect(err).NotTo(HaveOccurred())
 
-	client, mux, teardown := test.NewFakeGitHub()
+	fakeGithubClient, mux, teardown := test.NewFakeGitHub()
 	defer teardown()
 
 	mux.HandleFunc("/repos/kubernetes-sigs/cluster-api/contents/config/default/cluster-template.yaml", func(w http.ResponseWriter, r *http.Request) {
@@ -348,13 +344,14 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			c := &templateClient{
-				configClient: configClient,
-				gitHubClientFactory: func(configVariablesClient config.VariablesClient) (*github.Client, error) {
-					return client, nil
-				},
-				processor: yaml.NewSimpleProcessor(),
+			gitHubClientFactory := func(configVariablesClient config.VariablesClient) (*github.Client, error) {
+				return fakeGithubClient, nil
 			}
+			processor := yaml.NewSimpleProcessor()
+			c := newTemplateClient(TemplateClientInput{nil, configClient, processor})
+			// override the github client factory
+			c.gitHubClientFactory = gitHubClientFactory
+
 			got, err := c.GetFromURL(tt.args.templateURL, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {
 				g.Expect(err).To(HaveOccurred())
@@ -366,7 +363,7 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 			wantTemplate, err := repository.NewTemplate(
 				[]byte(tt.want),
 				configClient.Variables(),
-				yaml.NewSimpleProcessor(),
+				processor,
 				tt.args.targetNamespace,
 				tt.args.listVariablesOnly,
 			)

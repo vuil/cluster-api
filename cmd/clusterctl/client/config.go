@@ -166,7 +166,7 @@ func (c *clusterctlClient) GetClusterTemplate(options GetClusterTemplateOptions)
 	}
 
 	// Gets  the client for the current management cluster
-	cluster, err := c.clusterClientFactory(options.Kubeconfig)
+	cluster, err := c.clusterClientFactory(ClusterClientFactoryInput{options.Kubeconfig, options.YAMLProcessor})
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (c *clusterctlClient) getTemplateFromRepository(cluster cluster.Client, opt
 		return nil, err
 	}
 
-	repo, err := c.repositoryClientFactory(providerConfig, options.YAMLProcessor)
+	repo, err := c.repositoryClientFactory(RepositoryClientFactoryInput{provider: providerConfig, processor: options.YAMLProcessor})
 	if err != nil {
 		return nil, err
 	}

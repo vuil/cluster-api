@@ -18,7 +18,6 @@ package repository
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -50,9 +49,6 @@ const (
 	controllerContainerName = "manager"
 	namespaceArgPrefix      = "--namespace="
 )
-
-// variableRegEx defines the regexp used for searching variables inside a YAML
-var variableRegEx = regexp.MustCompile(`\${\s*([A-Z0-9_]+)\s*}`)
 
 // Components wraps a YAML file that defines the provider components
 // to be installed in a management cluster (CRD, Controller, RBAC etc.)
@@ -196,6 +192,9 @@ type ComponentsOptions struct {
 func NewComponents(provider config.Provider, configClient config.Client, processor yaml.Processor, rawyaml []byte, options ComponentsOptions) (*components, error) {
 
 	variables, err := processor.GetVariables(rawyaml)
+	if err != nil {
+		return nil, err
+	}
 
 	processedYaml := rawyaml
 	if !options.SkipVariables {
