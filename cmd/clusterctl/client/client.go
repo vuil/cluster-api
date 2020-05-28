@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 )
 
 // Client is exposes the clusterctl high-level client library.
@@ -64,7 +65,7 @@ type clusterctlClient struct {
 	clusterClientFactory    ClusterClientFactory
 }
 
-type RepositoryClientFactory func(config.Provider) (repository.Client, error)
+type RepositoryClientFactory func(config.Provider, Processor) (repository.Client, error)
 type ClusterClientFactory func(Kubeconfig) (cluster.Client, error)
 
 // Ensure clusterctlClient implements Client.
@@ -130,17 +131,17 @@ func newClusterctlClient(path string, options ...Option) (*clusterctlClient, err
 	return client, nil
 }
 
-// defaultClusterFactory is a ClusterClientFactory func the uses the default client provided by the cluster low level library.
-func defaultClusterFactory(configClient config.Client) func(kubeconfig Kubeconfig) (cluster.Client, error) {
-	return func(kubeconfig Kubeconfig) (cluster.Client, error) {
-		// Kubeconfig is a type alias to cluster.Kubeconfig
-		return cluster.New(cluster.Kubeconfig(kubeconfig), configClient), nil
+// defaultRepositoryFactory is a RepositoryClientFactory func the uses the default client provided by the repository low level library.
+func defaultRepositoryFactory(configClient config.Client) RepositoryClientFactory {
+	return func(providerConfig config.Provider, p Processor) (repository.Client, error) {
+		return repository.New(providerConfig, configClient, repository.InjectYamlProcessor(yaml.Processor(p)))
 	}
 }
 
-// defaultRepositoryFactory is a RepositoryClientFactory func the uses the default client provided by the repository low level library.
-func defaultRepositoryFactory(configClient config.Client) func(providerConfig config.Provider) (repository.Client, error) {
-	return func(providerConfig config.Provider) (repository.Client, error) {
-		return repository.New(providerConfig, configClient)
+// defaultClusterFactory is a ClusterClientFactory func the uses the default client provided by the cluster low level library.
+func defaultClusterFactory(configClient config.Client) ClusterClientFactory {
+	return func(kubeconfig Kubeconfig) (cluster.Client, error) {
+		// Kubeconfig is a type alias to cluster.Kubeconfig
+		return cluster.New(cluster.Kubeconfig(kubeconfig), configClient), nil
 	}
 }

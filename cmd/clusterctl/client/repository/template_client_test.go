@@ -25,6 +25,7 @@ import (
 
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/test"
 )
 
@@ -36,6 +37,7 @@ func Test_templates_Get(t *testing.T) {
 		provider              config.Provider
 		repository            Repository
 		configVariablesClient config.VariablesClient
+		processor             yaml.Processor
 	}
 	type args struct {
 		flavor            string
@@ -50,7 +52,6 @@ func Test_templates_Get(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		opts    []TemplateClientOption
 		want    want
 		wantErr bool
 	}{
@@ -64,6 +65,7 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
+				processor:             yaml.NewSimpleProcessor(),
 			},
 			args: args{
 				flavor:            "",
@@ -86,6 +88,7 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template-prod.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
+				processor:             yaml.NewSimpleProcessor(),
 			},
 			args: args{
 				flavor:            "prod",
@@ -107,6 +110,7 @@ func Test_templates_Get(t *testing.T) {
 					WithPaths("root", "").
 					WithDefaultVersion("v1.0"),
 				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
+				processor:             yaml.NewSimpleProcessor(),
 			},
 			args: args{
 				flavor:            "",
@@ -125,6 +129,7 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient(),
+				processor:             yaml.NewSimpleProcessor(),
 			},
 			args: args{
 				flavor:            "",
@@ -143,6 +148,7 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient(),
+				processor:             yaml.NewSimpleProcessor(),
 			},
 			args: args{
 				flavor:            "",
@@ -165,16 +171,11 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
+				processor:             NewFakeProcessor().WithGetVariablesErr(errors.New("cannot get vars")).WithArtifactName("cluster-template.yaml"),
 			},
 			args: args{
 				targetNamespace:   "ns1",
 				listVariablesOnly: true,
-			},
-			opts: []TemplateClientOption{
-				InjectYamlProcessor(NewFakeProcessor().
-					WithGetVariablesErr(errors.New("cannot get vars")).
-					WithArtifactName("cluster-template.yaml"),
-				),
 			},
 			wantErr: true,
 		},
@@ -188,9 +189,9 @@ func Test_templates_Get(t *testing.T) {
 					provider:              tt.fields.provider,
 					repository:            tt.fields.repository,
 					configVariablesClient: tt.fields.configVariablesClient,
+					processor:             tt.fields.processor,
 				},
 				tt.fields.version,
-				tt.opts...,
 			)
 			got, err := f.Get(tt.args.flavor, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {

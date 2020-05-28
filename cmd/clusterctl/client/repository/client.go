@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
+	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/test"
 )
 
@@ -50,6 +51,7 @@ type repositoryClient struct {
 	config.Provider
 	configClient config.Client
 	repository   Repository
+	processor    yaml.Processor
 }
 
 // ensure repositoryClient implements Client.
@@ -65,7 +67,7 @@ func (c *repositoryClient) Components() ComponentsClient {
 
 func (c *repositoryClient) Templates(version string) TemplateClient {
 	return newTemplateClient(
-		TemplateClientInput{c.Provider, c.repository, c.configClient.Variables()},
+		TemplateClientInput{c.Provider, c.repository, c.configClient.Variables(), c.processor},
 		version,
 	)
 }
@@ -86,6 +88,17 @@ func InjectRepository(repository Repository) Option {
 	}
 }
 
+// InjectYamlProcessor allows you to override the yaml processor that the
+// repository client uses. By default, the SimpleProcessor is used. This is
+// true even if a nil processor is injected.
+func InjectYamlProcessor(p yaml.Processor) Option {
+	return func(c *repositoryClient) {
+		if p != nil {
+			c.processor = p
+		}
+	}
+}
+
 // New returns a Client.
 func New(provider config.Provider, configClient config.Client, options ...Option) (Client, error) {
 	return newRepositoryClient(provider, configClient, options...)
@@ -95,6 +108,7 @@ func newRepositoryClient(provider config.Provider, configClient config.Client, o
 	client := &repositoryClient{
 		Provider:     provider,
 		configClient: configClient,
+		processor:    yaml.NewSimpleProcessor(),
 	}
 	for _, o := range options {
 		o(client)

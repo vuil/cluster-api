@@ -42,39 +42,22 @@ type TemplateClientInput struct {
 	provider              config.Provider
 	repository            Repository
 	configVariablesClient config.VariablesClient
+	processor             yaml.Processor
 }
 
 // Ensure templateClient implements the TemplateClient interface.
 var _ TemplateClient = &templateClient{}
 
-// TemplateClientOption is a configuration option supplied to
-// newTemplateClient
-type TemplateClientOption func(*templateClient)
-
-// InjectYamlProcessor allows to override the yaml processor implementation to use;
-// by default, the SimpleYamlProcessor is used.
-func InjectYamlProcessor(p yaml.Processor) TemplateClientOption {
-	return func(c *templateClient) {
-		c.processor = p
-	}
-}
-
 // newTemplateClient returns a templateClient. It uses the SimpleYamlProcessor
 // by default
-func newTemplateClient(input TemplateClientInput, version string, opts ...TemplateClientOption) *templateClient {
-	tc := &templateClient{
+func newTemplateClient(input TemplateClientInput, version string) *templateClient {
+	return &templateClient{
 		provider:              input.provider,
 		version:               version,
 		repository:            input.repository,
 		configVariablesClient: input.configVariablesClient,
-		processor:             yaml.NewSimpleProcessor(),
+		processor:             input.processor,
 	}
-
-	for _, o := range opts {
-		o(tc)
-	}
-
-	return tc
 }
 
 // Get return the template for the flavor specified.
