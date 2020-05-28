@@ -18,7 +18,6 @@ package config
 
 import (
 	"github.com/pkg/errors"
-	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/test"
 )
 
 // Client is used to interact with the clusterctl configurations.
@@ -106,5 +105,3 @@ type Reader interface {
 	UnmarshalKey(key string, value interface{}) error
 }
 
-// Ensures FakeReader implements the Reader interface.
-var _ Reader = &test.FakeReader{}

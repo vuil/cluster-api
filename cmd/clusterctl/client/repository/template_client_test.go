@@ -171,7 +171,7 @@ func Test_templates_Get(t *testing.T) {
 					WithDefaultVersion("v1.0").
 					WithFile("v1.0", "cluster-template.yaml", templateMapYaml),
 				configVariablesClient: test.NewFakeVariableClient().WithVar(variableName, variableValue),
-				processor:             NewFakeProcessor().WithGetVariablesErr(errors.New("cannot get vars")).WithArtifactName("cluster-template.yaml"),
+				processor:             test.NewFakeProcessor().WithGetVariablesErr(errors.New("cannot get vars")).WithArtifactName("cluster-template.yaml"),
 			},
 			args: args{
 				targetNamespace:   "ns1",
@@ -217,35 +217,4 @@ func Test_templates_Get(t *testing.T) {
 			}
 		})
 	}
-}
-
-type FakeProcessor struct {
-	errGetVariables error
-	artifactName    string
-}
-
-func NewFakeProcessor() *FakeProcessor {
-	return &FakeProcessor{}
-}
-
-func (fp *FakeProcessor) WithArtifactName(n string) *FakeProcessor {
-	fp.artifactName = n
-	return fp
-}
-
-func (fp *FakeProcessor) WithGetVariablesErr(e error) *FakeProcessor {
-	fp.errGetVariables = e
-	return fp
-}
-
-func (fp *FakeProcessor) ArtifactName(version, flavor string) string {
-	return fp.artifactName
-}
-
-func (fp *FakeProcessor) GetVariables(raw []byte) ([]string, error) {
-	return nil, fp.errGetVariables
-}
-
-func (fp *FakeProcessor) Process(raw []byte, variablesClient config.VariablesClient) ([]byte, error) {
-	return nil, nil
 }
