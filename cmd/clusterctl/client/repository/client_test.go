@@ -88,11 +88,11 @@ func Test_newRepositoryClient_YamlProcesor(t *testing.T) {
 		},
 		{
 			name: "it creates a repository client with specified yaml processor",
-			opts: []Option{InjectYamlProcessor(test.NewFakeProcessor())},
+			opts: []Option{InjectYamlProcessor(&fakeProcessor{})},
 			assert: func(g *WithT, p yaml.Processor) {
 				_, ok := (p).(*yaml.SimpleProcessor)
 				g.Expect(ok).To(BeFalse())
-				_, ok = (p).(*test.FakeProcessor)
+				_, ok = (p).(*fakeProcessor)
 				g.Expect(ok).To(BeTrue())
 			},
 		},
@@ -125,4 +125,18 @@ func Test_newRepositoryClient_YamlProcesor(t *testing.T) {
 			tt.assert(g, repoClient.processor)
 		})
 	}
+}
+
+type fakeProcessor struct{}
+
+func (fp *fakeProcessor) ArtifactName(version, flavor string) string {
+	return ""
+}
+
+func (fp *fakeProcessor) GetVariables(raw []byte) ([]string, error) {
+	return nil, nil
+}
+
+func (fp *fakeProcessor) Process(raw []byte, variablesClient config.VariablesClient) ([]byte, error) {
+	return nil, nil
 }
