@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
-	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 )
 
 // Client is exposes the clusterctl high-level client library.
@@ -66,10 +65,7 @@ type clusterctlClient struct {
 }
 
 type RepositoryClientFactoryInput struct {
-	// TODO: this type should be Provider which is an alias of
-	// config.Provider. Should abide by the contract of not exposing internal
-	// types out.
-	provider  config.Provider
+	provider  Provider
 	processor Processor
 }
 type RepositoryClientFactory func(RepositoryClientFactoryInput) (repository.Client, error)
@@ -149,7 +145,7 @@ func defaultRepositoryFactory(configClient config.Client) RepositoryClientFactor
 		return repository.New(
 			input.provider,
 			configClient,
-			repository.InjectYamlProcessor(yaml.Processor(input.processor)),
+			repository.InjectYamlProcessor(input.processor),
 		)
 	}
 }
@@ -161,8 +157,7 @@ func defaultClusterFactory(configClient config.Client) ClusterClientFactory {
 			// Kubeconfig is a type alias to cluster.Kubeconfig
 			cluster.Kubeconfig(input.kubeconfig),
 			configClient,
-			// Processor is a type alias to yaml.Processor
-			cluster.InjectYamlProcessor(yaml.Processor(input.processor)),
+			cluster.InjectYamlProcessor(input.processor),
 		), nil
 	}
 }

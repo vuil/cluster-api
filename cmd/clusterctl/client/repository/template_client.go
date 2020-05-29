@@ -39,6 +39,7 @@ type templateClient struct {
 }
 
 type TemplateClientInput struct {
+	version               string
 	provider              config.Provider
 	repository            Repository
 	configVariablesClient config.VariablesClient
@@ -50,10 +51,10 @@ var _ TemplateClient = &templateClient{}
 
 // newTemplateClient returns a templateClient. It uses the SimpleYamlProcessor
 // by default
-func newTemplateClient(input TemplateClientInput, version string) *templateClient {
+func newTemplateClient(input TemplateClientInput) *templateClient {
 	return &templateClient{
 		provider:              input.provider,
-		version:               version,
+		version:               input.version,
 		repository:            input.repository,
 		configVariablesClient: input.configVariablesClient,
 		processor:             input.processor,

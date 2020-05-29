@@ -186,12 +186,12 @@ func Test_templates_Get(t *testing.T) {
 
 			f := newTemplateClient(
 				TemplateClientInput{
+					version:               tt.fields.version,
 					provider:              tt.fields.provider,
 					repository:            tt.fields.repository,
 					configVariablesClient: tt.fields.configVariablesClient,
 					processor:             tt.fields.processor,
 				},
-				tt.fields.version,
 			)
 			got, err := f.Get(tt.args.flavor, tt.args.targetNamespace, tt.args.listVariablesOnly)
 			if tt.wantErr {

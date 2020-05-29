@@ -168,7 +168,7 @@ func InjectPollImmediateWaiter(pollImmediateWaiter PollImmediateWaiter) Option {
 }
 
 // InjectYamlProcessor allows you to override the yaml processor that the
-// repository client uses. By default, the SimpleProcessor is used. This is
+// cluster client uses. By default, the SimpleProcessor is used. This is
 // true even if a nil processor is injected.
 func InjectYamlProcessor(p yaml.Processor) Option {
 	return func(c *clusterClient) {

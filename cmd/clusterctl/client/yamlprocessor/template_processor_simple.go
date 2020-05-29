@@ -32,7 +32,9 @@ func NewSimpleProcessor() *SimpleProcessor {
 	return &SimpleProcessor{}
 }
 
-func (tp *SimpleProcessor) ArtifactName(version, flavor string) string {
+// AritfactName returns the name of the artifact that the simple processor
+// uses.
+func (tp *SimpleProcessor) ArtifactName(_, flavor string) string {
 	// building template name according with the naming convention
 	name := "cluster-template"
 	if flavor != "" {
@@ -43,10 +45,15 @@ func (tp *SimpleProcessor) ArtifactName(version, flavor string) string {
 	return name
 }
 
+// GetVariables returns a list of the variables specified in the yaml
+// manifest. The format of the variables being parsed is ${VAR}
 func (tp *SimpleProcessor) GetVariables(rawArtifact []byte) ([]string, error) {
 	return inspectVariables(rawArtifact), nil
 }
 
+// Process returns the final yaml with all the variables replaced with their
+// respective values. If there are variables without corresponding values, it
+// will return the yaml along with an error.
 func (tp *SimpleProcessor) Process(rawArtifact []byte, variablesClient config.VariablesClient) ([]byte, error) {
 	// Inspect the yaml read from the repository for variables.
 	variables := inspectVariables(rawArtifact)

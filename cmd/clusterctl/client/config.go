@@ -98,9 +98,9 @@ type GetClusterTemplateOptions struct {
 	// without executing any further processing.
 	ListVariablesOnly bool
 
-	// YAMLProcessor defines the yaml processor to use for the cluster
+	// YamlProcessor defines the yaml processor to use for the cluster
 	// template processing. If not defined, SimpleProcessor will be used.
-	YAMLProcessor Processor
+	YamlProcessor Processor
 }
 
 // numSources return the number of template sources currently set on a GetClusterTemplateOptions.
@@ -166,7 +166,7 @@ func (c *clusterctlClient) GetClusterTemplate(options GetClusterTemplateOptions)
 	}
 
 	// Gets  the client for the current management cluster
-	cluster, err := c.clusterClientFactory(ClusterClientFactoryInput{options.Kubeconfig, options.YAMLProcessor})
+	cluster, err := c.clusterClientFactory(ClusterClientFactoryInput{options.Kubeconfig, options.YamlProcessor})
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +207,7 @@ func (c *clusterctlClient) getTemplateFromRepository(cluster cluster.Client, opt
 	source := *options.ProviderRepositorySource
 	targetNamespace := options.TargetNamespace
 	listVariablesOnly := options.ListVariablesOnly
+	processor := options.YamlProcessor
 
 	// If the option specifying the name of the infrastructure provider to get templates from is empty, try to detect it.
 	provider := source.InfrastructureProvider
@@ -261,7 +262,7 @@ func (c *clusterctlClient) getTemplateFromRepository(cluster cluster.Client, opt
 		return nil, err
 	}
 
-	repo, err := c.repositoryClientFactory(RepositoryClientFactoryInput{provider: providerConfig, processor: options.YAMLProcessor})
+	repo, err := c.repositoryClientFactory(RepositoryClientFactoryInput{provider: providerConfig, processor: processor})
 	if err != nil {
 		return nil, err
 	}

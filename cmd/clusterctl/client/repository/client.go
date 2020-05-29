@@ -66,10 +66,7 @@ func (c *repositoryClient) Components() ComponentsClient {
 }
 
 func (c *repositoryClient) Templates(version string) TemplateClient {
-	return newTemplateClient(
-		TemplateClientInput{c.Provider, c.repository, c.configClient.Variables(), c.processor},
-		version,
-	)
+	return newTemplateClient(TemplateClientInput{version, c.Provider, c.repository, c.configClient.Variables(), c.processor})
 }
 
 func (c *repositoryClient) Metadata(version string) MetadataClient {
