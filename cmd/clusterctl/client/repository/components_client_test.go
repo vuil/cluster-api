@@ -121,7 +121,7 @@ func Test_componentsClient_Get(t *testing.T) {
 				repository: test.NewFakeRepository().
 					WithPaths("root", "components.yaml").
 					WithDefaultVersion("v1.0.0").
-					WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml)),
+					WithFile("v1.0.0", "components.yaml", utilyaml.JoinYaml(namespaceYaml, controllerYaml, configMapYaml)),
 			},
 			args: args{
 				version:           "v1.0.0",
@@ -323,7 +323,7 @@ func Test_componentsClient_YamlProcessor(t *testing.T) {
 		r := test.NewFakeRepository().
 			WithPaths("root", "components.yaml").
 			WithDefaultVersion("v1.0.0").
-			WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
+			WithFile("v1.0.0", "components.yaml", utilyaml.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
 
 		f := newComponentsClient(p, r, configClient)
 		//override the yaml processor to one that will return an error
@@ -348,7 +348,7 @@ func Test_componentsClient_YamlProcessor(t *testing.T) {
 		r := test.NewFakeRepository().
 			WithPaths("root", "components.yaml").
 			WithDefaultVersion("v1.0.0").
-			WithFile("v1.0.0", "components.yaml", util.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
+			WithFile("v1.0.0", "components.yaml", utilyaml.JoinYaml(namespaceYaml, controllerYaml, configMapYaml))
 
 		f := newComponentsClient(p, r, configClient)
 		//override the yaml processor to one that will return an error
