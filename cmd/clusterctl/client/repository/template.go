@@ -70,28 +70,29 @@ func (t *template) Yaml() ([]byte, error) {
 	return utilyaml.FromUnstructured(t.objs)
 }
 
+type TemplateInput struct {
+	RawArtifact           []byte
+	ConfigVariablesClient config.VariablesClient
+	Processor             yaml.Processor
+	TargetNamespace       string
+	ListVariablesOnly     bool
+}
+
 // NewTemplate returns a new objects embedding a cluster template YAML file.
-// TODO: Refactor to reduce the number of args passed in.
-func NewTemplate(
-	rawArtifact []byte,
-	configVariablesClient config.VariablesClient,
-	processor yaml.Processor,
-	targetNamespace string,
-	listVariablesOnly bool,
-) (*template, error) {
-	variables, err := processor.GetVariables(rawArtifact)
+func NewTemplate(input TemplateInput) (*template, error) {
+	variables, err := input.Processor.GetVariables(input.RawArtifact)
 	if err != nil {
 		return nil, err
 	}
 
-	if listVariablesOnly {
+	if input.ListVariablesOnly {
 		return &template{
 			variables:       variables,
-			targetNamespace: targetNamespace,
+			targetNamespace: input.TargetNamespace,
 		}, nil
 	}
 
-	processedYaml, err := processor.Process(rawArtifact, configVariablesClient)
+	processedYaml, err := input.Processor.Process(input.RawArtifact, input.ConfigVariablesClient)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +106,11 @@ func NewTemplate(
 	// Ensures all the template components are deployed in the target namespace (applies only to namespaced objects)
 	// This is required in order to ensure a cluster and all the related objects are in a single namespace, that is a requirement for
 	// the clusterctl move operation (and also for many controller reconciliation loops).
-	objs = fixTargetNamespace(objs, targetNamespace)
+	objs = fixTargetNamespace(objs, input.TargetNamespace)
 
 	return &template{
 		variables:       variables,
-		targetNamespace: targetNamespace,
+		targetNamespace: input.TargetNamespace,
 		objs:            objs,
 	}, nil
 }

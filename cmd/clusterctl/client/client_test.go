@@ -418,7 +418,13 @@ func (f *fakeTemplateClient) Get(flavor, targetNamespace string, listVariablesOn
 	if err != nil {
 		return nil, err
 	}
-	return repository.NewTemplate(content, f.configVariablesClient, f.processor, targetNamespace, listVariablesOnly)
+	return repository.NewTemplate(repository.TemplateInput{
+		RawArtifact:           content,
+		ConfigVariablesClient: f.configVariablesClient,
+		Processor:             f.processor,
+		TargetNamespace:       targetNamespace,
+		ListVariablesOnly:     listVariablesOnly,
+	})
 }
 
 // fakeMetadataClient provides a super simple MetadataClient (e.g. without support for local overrides/embedded metadata)

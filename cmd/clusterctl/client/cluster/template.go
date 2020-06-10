@@ -99,7 +99,13 @@ func (t *templateClient) GetFromConfigMap(configMapNamespace, configMapName, con
 		return nil, errors.Errorf("the ConfigMap %s/%s does not have the %q data key", configMapNamespace, configMapName, configMapDataKey)
 	}
 
-	return repository.NewTemplate([]byte(data), t.configClient.Variables(), t.processor, targetNamespace, listVariablesOnly)
+	return repository.NewTemplate(repository.TemplateInput{
+		RawArtifact:           []byte(data),
+		ConfigVariablesClient: t.configClient.Variables(),
+		Processor:             t.processor,
+		TargetNamespace:       targetNamespace,
+		ListVariablesOnly:     listVariablesOnly,
+	})
 }
 
 func (t *templateClient) GetFromURL(templateURL, targetNamespace string, listVariablesOnly bool) (repository.Template, error) {
@@ -112,7 +118,13 @@ func (t *templateClient) GetFromURL(templateURL, targetNamespace string, listVar
 		return nil, errors.Wrapf(err, "invalid GetFromURL operation")
 	}
 
-	return repository.NewTemplate(content, t.configClient.Variables(), t.processor, targetNamespace, listVariablesOnly)
+	return repository.NewTemplate(repository.TemplateInput{
+		RawArtifact:           content,
+		ConfigVariablesClient: t.configClient.Variables(),
+		Processor:             t.processor,
+		TargetNamespace:       targetNamespace,
+		ListVariablesOnly:     listVariablesOnly,
+	})
 }
 
 func (t *templateClient) getURLContent(templateURL string) ([]byte, error) {

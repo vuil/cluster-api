@@ -143,13 +143,13 @@ func Test_templateClient_GetFromConfigMap(t *testing.T) {
 			}
 			g.Expect(err).NotTo(HaveOccurred())
 
-			wantTemplate, err := repository.NewTemplate(
-				[]byte(tt.want),
-				configClient.Variables(),
-				processor,
-				tt.args.targetNamespace,
-				tt.args.listVariablesOnly,
-			)
+			wantTemplate, err := repository.NewTemplate(repository.TemplateInput{
+				RawArtifact:           []byte(tt.want),
+				ConfigVariablesClient: configClient.Variables(),
+				Processor:             processor,
+				TargetNamespace:       tt.args.targetNamespace,
+				ListVariablesOnly:     tt.args.listVariablesOnly,
+			})
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got).To(Equal(wantTemplate))
 		})
@@ -360,13 +360,13 @@ func Test_templateClient_GetFromURL(t *testing.T) {
 
 			g.Expect(err).NotTo(HaveOccurred())
 
-			wantTemplate, err := repository.NewTemplate(
-				[]byte(tt.want),
-				configClient.Variables(),
-				processor,
-				tt.args.targetNamespace,
-				tt.args.listVariablesOnly,
-			)
+			wantTemplate, err := repository.NewTemplate(repository.TemplateInput{
+				RawArtifact:           []byte(tt.want),
+				ConfigVariablesClient: configClient.Variables(),
+				Processor:             processor,
+				TargetNamespace:       tt.args.targetNamespace,
+				ListVariablesOnly:     tt.args.listVariablesOnly,
+			})
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got).To(Equal(wantTemplate))
 		})

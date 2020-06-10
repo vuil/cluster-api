@@ -95,5 +95,5 @@ func (c *templateClient) Get(flavor, targetNamespace string, listVariablesOnly b
 		log.V(1).Info("Using", "Override", name, "Provider", c.provider.ManifestLabel(), "Version", version)
 	}
 
-	return NewTemplate(rawArtifact, c.configVariablesClient, c.processor, targetNamespace, listVariablesOnly)
+	return NewTemplate(TemplateInput{rawArtifact, c.configVariablesClient, c.processor, targetNamespace, listVariablesOnly})
 }
